@@ -581,35 +581,38 @@ export type Database = {
     Tables: {
       agents: {
         Row: {
-          ai: boolean
           created_at: string
+          deleted_at: string | null
           extra: Json | null
           id: string
           name: string
           organization_id: string
           picture: string | null
+          role: Database["public"]["Enums"]["role"]
           updated_at: string
           user_id: string | null
         }
         Insert: {
-          ai: boolean
           created_at?: string
+          deleted_at?: string | null
           extra?: Json | null
           id?: string
           name: string
           organization_id: string
           picture?: string | null
+          role?: Database["public"]["Enums"]["role"]
           updated_at?: string
           user_id?: string | null
         }
         Update: {
-          ai?: boolean
           created_at?: string
+          deleted_at?: string | null
           extra?: Json | null
           id?: string
           name?: string
           organization_id?: string
           picture?: string | null
+          role?: Database["public"]["Enums"]["role"]
           updated_at?: string
           user_id?: string | null
         }
@@ -749,61 +752,161 @@ export type Database = {
       }
       conversations: {
         Row: {
-          contact_address: string | null
+          address: string
           created_at: string
           extra: Json | null
-          group_address: string | null
           id: string
           name: string | null
           organization_address: string
           organization_id: string
           service: Database["public"]["Enums"]["service"]
-          status: string
+          type: string | null
           updated_at: string
         }
         Insert: {
-          contact_address?: string | null
+          address: string
           created_at?: string
           extra?: Json | null
-          group_address?: string | null
           id?: string
           name?: string | null
           organization_address: string
           organization_id: string
           service: Database["public"]["Enums"]["service"]
-          status?: string
+          type?: string | null
           updated_at?: string
         }
         Update: {
-          contact_address?: string | null
+          address?: string
           created_at?: string
           extra?: Json | null
-          group_address?: string | null
           id?: string
           name?: string | null
           organization_address?: string
           organization_id?: string
           service?: Database["public"]["Enums"]["service"]
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_organization_address_fkey"
+            columns: ["organization_id", "service", "organization_address"]
+            isOneToOne: false
+            referencedRelation: "organizations_addresses"
+            referencedColumns: ["organization_id", "service", "address"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations_agents: {
+        Row: {
+          agent_id: string
+          conversation_id: string
+          created_at: string
+          extra: Json | null
+          organization_address: string
+          organization_id: string
+          service: Database["public"]["Enums"]["service"]
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          conversation_id: string
+          created_at?: string
+          extra?: Json | null
+          organization_address: string
+          organization_id: string
+          service: Database["public"]["Enums"]["service"]
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          conversation_id?: string
+          created_at?: string
+          extra?: Json | null
+          organization_address?: string
+          organization_id?: string
+          service?: Database["public"]["Enums"]["service"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_agents_agent_id_fkey"
+            columns: ["organization_id", "agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "conversations_agents_conversation_id_fkey"
+            columns: ["organization_id", "conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "conversations_agents_organization_address_fkey"
+            columns: ["organization_id", "service", "organization_address"]
+            isOneToOne: false
+            referencedRelation: "organizations_addresses"
+            referencedColumns: ["organization_id", "service", "address"]
+          },
+          {
+            foreignKeyName: "conversations_agents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invitations: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          role: Database["public"]["Enums"]["role"]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invited_by?: string | null
+          organization_id: string
+          role?: Database["public"]["Enums"]["role"]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string | null
+          organization_id?: string
+          role?: Database["public"]["Enums"]["role"]
           status?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "conversations_contact_address_fkey"
-            columns: ["organization_id", "service", "contact_address"]
+            foreignKeyName: "invitations_invited_by_fkey"
+            columns: ["invited_by"]
             isOneToOne: false
-            referencedRelation: "contacts_addresses"
-            referencedColumns: ["organization_id", "service", "address"]
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "conversations_organization_address_fkey"
-            columns: ["organization_id", "organization_address"]
-            isOneToOne: false
-            referencedRelation: "organizations_addresses"
-            referencedColumns: ["organization_id", "address"]
-          },
-          {
-            foreignKeyName: "conversations_organization_id_fkey"
+            foreignKeyName: "invitations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -848,10 +951,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "logs_organization_address_fkey"
-            columns: ["organization_id", "organization_address"]
+            columns: ["organization_id", "service", "organization_address"]
             isOneToOne: false
             referencedRelation: "organizations_addresses"
-            referencedColumns: ["organization_id", "address"]
+            referencedColumns: ["organization_id", "service", "address"]
           },
           {
             foreignKeyName: "logs_organization_id_fkey"
@@ -865,16 +968,15 @@ export type Database = {
       messages: {
         Row: {
           agent_id: string | null
-          contact_address: string | null
           content: Json
+          conversation_address: string | null
           conversation_id: string
           created_at: string
-          direction: Database["public"]["Enums"]["direction"]
           external_id: string | null
-          group_address: string | null
           id: string
           organization_address: string
           organization_id: string
+          sender_address: string | null
           service: Database["public"]["Enums"]["service"]
           status: Json
           thread_id: string | null
@@ -883,16 +985,15 @@ export type Database = {
         }
         Insert: {
           agent_id?: string | null
-          contact_address?: string | null
           content: Json
+          conversation_address?: string | null
           conversation_id: string
           created_at?: string
-          direction: Database["public"]["Enums"]["direction"]
           external_id?: string | null
-          group_address?: string | null
           id?: string
           organization_address: string
           organization_id: string
+          sender_address?: string | null
           service: Database["public"]["Enums"]["service"]
           status?: Json
           thread_id?: string | null
@@ -901,16 +1002,15 @@ export type Database = {
         }
         Update: {
           agent_id?: string | null
-          contact_address?: string | null
           content?: Json
+          conversation_address?: string | null
           conversation_id?: string
           created_at?: string
-          direction?: Database["public"]["Enums"]["direction"]
           external_id?: string | null
-          group_address?: string | null
           id?: string
           organization_address?: string
           organization_id?: string
+          sender_address?: string | null
           service?: Database["public"]["Enums"]["service"]
           status?: Json
           thread_id?: string | null
@@ -1015,6 +1115,7 @@ export type Database = {
       organizations_addresses: {
         Row: {
           address: string
+          agent_id: string | null
           created_at: string
           extra: Json | null
           organization_id: string
@@ -1024,6 +1125,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          agent_id?: string | null
           created_at?: string
           extra?: Json | null
           organization_id: string
@@ -1033,6 +1135,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          agent_id?: string | null
           created_at?: string
           extra?: Json | null
           organization_id?: string
@@ -1042,42 +1145,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "organizations_addresses_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "organizations_addresses_agent_id_fkey"
+            columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "agents"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      quick_replies: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          name: string
-          organization_id: string
-          updated_at: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          name: string
-          organization_id: string
-          updated_at?: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          name?: string
-          organization_id?: string
-          updated_at?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "quick_replies_organization_id_fkey"
+            foreignKeyName: "organizations_addresses_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1131,14 +1206,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      agent_update_by_owner_rules: {
+      accept_invitation: { Args: { invitation_id: string }; Returns: string }
+      agent_identity_and_role_unchanged: {
         Args: {
-          p_ai: boolean
-          p_extra: Json
           p_id: string
           p_organization_id: string
+          p_role: Database["public"]["Enums"]["role"]
           p_user_id: string
         }
+        Returns: boolean
+      }
+      agent_identity_unchanged: {
+        Args: { p_id: string; p_organization_id: string; p_user_id: string }
         Returns: boolean
       }
       contact_address_update_rules: {
@@ -1155,6 +1234,17 @@ export type Database = {
         Args: { role?: Database["public"]["Enums"]["role"] }
         Returns: string[]
       }
+      get_own_agents: { Args: never; Returns: string[] }
+      get_participant_conversations: { Args: never; Returns: string[] }
+      get_restricted_conversations: { Args: never; Returns: string[] }
+      get_visible_addresses: {
+        Args: never
+        Returns: {
+          address: string
+          organization_id: string
+          service: Database["public"]["Enums"]["service"]
+        }[]
+      }
       init_data: {
         Args: {
           p_limit?: number
@@ -1165,16 +1255,16 @@ export type Database = {
         }
         Returns: Json
       }
-      member_self_update_rules: {
+      is_conversation_visible: {
         Args: {
-          p_ai: boolean
-          p_extra: Json
-          p_id: string
-          p_organization_id: string
-          p_user_id: string
+          conv_addr: string
+          conv_id: string
+          conv_org: string
+          conv_service: Database["public"]["Enums"]["service"]
         }
         Returns: boolean
       }
+      is_media_visible: { Args: { object_name: string }; Returns: boolean }
       merge_update_jsonb: {
         Args: { object: Json; path: string[]; target: Json }
         Returns: Json
@@ -1183,9 +1273,9 @@ export type Database = {
         Args: { p_id: string; p_name: string }
         Returns: boolean
       }
+      reject_invitation: { Args: { invitation_id: string }; Returns: undefined }
     }
     Enums: {
-      direction: "incoming" | "outgoing" | "internal"
       log_level: "info" | "warning" | "error"
       role: "owner" | "admin" | "member"
       service:
@@ -1879,7 +1969,6 @@ export const Constants = {
   },
   public: {
     Enums: {
-      direction: ["incoming", "outgoing", "internal"],
       log_level: ["info", "warning", "error"],
       role: ["owner", "admin", "member"],
       service: [
