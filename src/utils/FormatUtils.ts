@@ -42,7 +42,7 @@ export function formatPhoneNumber(phoneNumber: string): string {
       extract: false,
     });
     return parsed.formatInternational();
-  } catch (error) {
+  } catch {
     return phoneNumber;
   }
 }
