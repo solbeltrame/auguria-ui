@@ -1,6 +1,9 @@
 import { type OutgoingStatus } from "@/supabase/client";
 // @ts-expect-error no type declarations for the core-js-pure submodule
-import toReversed from "core-js-pure/actual/array/to-reversed";
+import toReversedUntyped from "core-js-pure/actual/array/to-reversed";
+
+// Array.prototype.toReversed, polyfilled — not in the ES2022 lib we target.
+const toReversed = toReversedUntyped as <T>(items: readonly T[]) => T[];
 
 const outgoingStatusHierarchy = [
   "pending",

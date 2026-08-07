@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { type ChangeEvent, useEffect, useRef } from "react";
 import { type TemplateData } from "@/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
 import { PlusIcon } from "lucide-react";
@@ -300,7 +300,7 @@ export default function TemplateEditor({
               disabled={!!existingTemplate}
               {...register("name", {
                 required: t("El nombre es obligatorio"),
-                onChange: (e) => {
+                onChange: (e: ChangeEvent<HTMLInputElement>) => {
                   e.target.value = e.target.value.replace(/ /g, "_");
                 },
               })}

@@ -6,7 +6,13 @@ import type {
 import type { AppState } from "./useBoundStore";
 import type { StateCreator } from "zustand";
 // @ts-expect-error no type declarations for the core-js-pure submodule
-import groupBy from "core-js-pure/actual/object/group-by";
+import groupByUntyped from "core-js-pure/actual/object/group-by";
+
+// Object.groupBy, polyfilled — it is not in the ES2022 lib this project targets.
+const groupBy = groupByUntyped as <T>(
+  items: Iterable<T>,
+  keySelector: (item: T, index: number) => string,
+) => Partial<Record<string, T[]>>;
 import { type MessageRowV0, toV1 } from "@/supabase/messages-v0";
 
 export function timestampDescending(a?: MessageRow, b?: MessageRow) {
@@ -152,7 +158,7 @@ export const createChatSlice: StateCreator<Partial<AppState>> = (
 
       const messages = new Map(state.chat.messages);
 
-      const msgsByConv: { [key: string]: MessageRow[] } = groupBy(
+      const msgsByConv = groupBy(
         msgs.filter((m) => m.timestamp <= m.updated_at), // do not display scheduled messages (timestamp in the future)
         (msg: MessageRow) => msg.conversation_id,
       );

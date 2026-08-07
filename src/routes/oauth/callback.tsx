@@ -6,6 +6,15 @@ export const Route = createFileRoute("/oauth/callback")({
   component: OAuthCallback,
 });
 
+/** What this popup posts back to the opener (see ToolsSection). */
+export type OAuthCallbackMessage = {
+  type: "oauth-callback";
+  apiKey: string;
+  url: string | null;
+  email: string | null;
+  files: string | null;
+};
+
 function OAuthCallback() {
   const { translate: t } = useTranslation();
 
@@ -24,10 +33,14 @@ function OAuthCallback() {
       document.body.innerText = `Error: ${error}`;
     } else if (apiKey && window.opener) {
       // Send the data to the opener
-      window.opener.postMessage(
-        { type: "oauth-callback", apiKey, url, email, files },
-        window.location.origin,
-      );
+      const message: OAuthCallbackMessage = {
+        type: "oauth-callback",
+        apiKey,
+        url,
+        email,
+        files,
+      };
+      (window.opener as Window).postMessage(message, window.location.origin);
       // Close the popup
       window.close();
     } else if (!apiKey) {

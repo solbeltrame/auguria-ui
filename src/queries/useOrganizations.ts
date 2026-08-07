@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type OrganizationInsert,
+  type OrganizationRow,
   type OrganizationUpdate,
   supabase,
 } from "@/supabase/client";
 import useBoundStore from "@/stores/useBoundStore";
-import { queryKeys } from "./queryKeys";
+import { type CachedResponse, queryKeys } from "./queryKeys";
 
 export function useOrganizations() {
   const userId = useBoundStore((state) => state.ui.user?.id);
@@ -73,10 +74,9 @@ export function useCreateOrganization() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedResponse<OrganizationRow>>(
         queryKeys.organizations.detail(data.id),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (old: any) => (old ? { ...old, data } : { data, error: null }),
+        (old) => (old ? { ...old, data } : { data, error: null }),
       );
     },
   });
@@ -104,10 +104,9 @@ export function useUpdateCurrentOrganization() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedResponse<OrganizationRow>>(
         queryKeys.organizations.detail(data.id),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (old: any) => (old ? { ...old, data } : old),
+        (old) => (old ? { ...old, data } : old),
       );
     },
   });

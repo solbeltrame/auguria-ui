@@ -5,7 +5,7 @@ export async function loadTranslations(lang: string): Promise<void> {
 
   const res = await fetch(`/locales/${lang}.json`);
   if (res.ok) {
-    cache.set(lang, await res.json());
+    cache.set(lang, (await res.json()) as Record<string, string>);
   }
 }
 

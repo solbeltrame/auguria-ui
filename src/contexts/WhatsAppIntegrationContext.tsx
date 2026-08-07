@@ -79,8 +79,8 @@ export function WhatsAppIntegrationProvider({
   useEffect(() => {
     let sessionInfoListener: ((event: MessageEvent) => void) | null = null;
 
-    (window as any).fbAsyncInit = function () {
-      (window as any).FB.init({
+    window.fbAsyncInit = function () {
+      window.FB?.init({
         appId: import.meta.env.VITE_META_APP_ID,
         autoLogAppEvents: true,
         xfbml: true,
@@ -106,7 +106,7 @@ export function WhatsAppIntegrationProvider({
       let data: EventListenerData;
 
       try {
-        data = JSON.parse(event.data);
+        data = JSON.parse(event.data) as EventListenerData;
       } catch (error) {
         console.error("Could not JSON parse event data", error);
         return;
@@ -143,7 +143,7 @@ export function WhatsAppIntegrationProvider({
       }
 
       // No type assertion needed - TypeScript knows data.data is SuccessfulFlowData
-      (window as any).__waSessionInfo = {
+      window.__waSessionInfo = {
         phone_number_id: data.data.phone_number_id,
         waba_id: data.data.waba_id,
         business_id: data.data.business_id,
@@ -157,7 +157,7 @@ export function WhatsAppIntegrationProvider({
     (function (d, s, id) {
       const fjs = d.getElementsByTagName(s)[0];
       if (d.getElementById(id)) return;
-      const js = d.createElement(s) as any;
+      const js = d.createElement(s) as HTMLScriptElement;
       js.id = id;
       js.src = "https://connect.facebook.net/en_US/sdk.js";
       // The SDK is served from connect.facebook.net, which tracking protection
@@ -165,14 +165,14 @@ export function WhatsAppIntegrationProvider({
       // failure so the onboarding page can show the error up front instead of
       // letting the user click a button that is bound to fail.
       js.onerror = function () {
-        (window as any).__fbSdkFailed = true;
+        window.__fbSdkFailed = true;
         window.dispatchEvent(new Event("fb-sdk-failed"));
       };
       fjs.parentNode?.insertBefore(js, fjs);
     })(document, "script", "facebook-jssdk");
 
     return () => {
-      (window as any).fbAsyncInit = undefined;
+      window.fbAsyncInit = undefined;
       if (sessionInfoListener) {
         window.removeEventListener("message", sessionInfoListener);
       }
@@ -188,8 +188,8 @@ export function WhatsAppIntegrationProvider({
       options?: SignupOptions,
     ) => {
       // Launch Facebook login
-      (window as any).FB.login(
-        function (response: any) {
+      window.FB?.login(
+        function (response: FBLoginResponse) {
           if (response.authResponse) {
             // Exchange this code for a business integration system user access token
             const code = response.authResponse.code;
@@ -202,7 +202,7 @@ export function WhatsAppIntegrationProvider({
             setLoading(true);
 
             // Retrieve session info captured from message events
-            const sessionInfo = (window as any).__waSessionInfo || {};
+            const sessionInfo: WASessionInfo = window.__waSessionInfo ?? {};
 
             // Construct payload according to SignupPayload type
             const payload: SignupPayload = {

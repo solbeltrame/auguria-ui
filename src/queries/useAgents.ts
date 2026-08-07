@@ -9,7 +9,7 @@ import {
   supabase,
 } from "@/supabase/client";
 import useBoundStore from "@/stores/useBoundStore";
-import { queryKeys } from "./queryKeys";
+import { type CachedResponse, queryKeys } from "./queryKeys";
 
 export function useAgent<T = AgentRow>(id: string) {
   const userId = useBoundStore((state) => state.ui.user?.id);
@@ -208,10 +208,9 @@ export function useCreateAgent() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.agents.all(orgId),
       });
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedResponse<AgentRow>>(
         queryKeys.agents.detail(orgId, data.id),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (old: any) => (old ? { ...old, data } : { data, error: null }),
+        (old) => (old ? { ...old, data } : { data, error: null }),
       );
     },
   });
@@ -242,10 +241,9 @@ export function useUpdateAgent() {
       // Use function updater to preserve the Supabase response wrapper.
       // queryFn returns { data: AgentRow, ... } and select does data.data,
       // so setting a raw AgentRow would make select return undefined.
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedResponse<AgentRow>>(
         queryKeys.agents.detail(data.organization_id, variables.id),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (old: any) => (old ? { ...old, data } : old),
+        (old) => (old ? { ...old, data } : old),
       );
     },
   });

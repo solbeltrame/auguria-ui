@@ -24,9 +24,7 @@ export default function WhatsAppIntegration({
   // The Facebook SDK loads asynchronously from connect.facebook.net, which is
   // commonly blocked by tracking protection / ad blockers. If it fails to load,
   // show the error up front instead of a button that cannot work.
-  const [sdkFailed, setSdkFailed] = useState(
-    () => !!(window as any).__fbSdkFailed,
-  );
+  const [sdkFailed, setSdkFailed] = useState(() => !!window.__fbSdkFailed);
 
   useEffect(() => {
     const onFail = () => setSdkFailed(true);

@@ -30,15 +30,24 @@ import type {
   LocalHTTPToolConfig,
   LocalSQLToolConfig,
   LocalFunctionToolConfig,
+  SQLToolConfig,
   ToolConfig,
 } from "@/supabase/client";
 import { useCurrentAgent } from "@/queries/useAgents";
 import { useApiKeys, useCreateApiKey } from "@/queries/useApiKeys";
+import type { OAuthCallbackMessage } from "@/routes/oauth/callback";
 
-type ToolsSectionProps<T extends FieldValues> = {
-  control: Control<T>;
-  register: UseFormRegister<T>;
-  setValue: UseFormSetValue<T>;
+/**
+ * The slice of the agent form this section owns. React Hook Form resolves
+ * field-name types (`Path<T>`) against a concrete form shape and cannot do it
+ * through a generic one, so everything below is written against this shape.
+ */
+export type ToolsForm = { extra?: { tools?: ToolConfig[] } | null };
+
+type ToolsSectionProps = {
+  control: Control<ToolsForm>;
+  register: UseFormRegister<ToolsForm>;
+  setValue: UseFormSetValue<ToolsForm>;
 };
 
 type EditorState =
@@ -50,73 +59,62 @@ type EditorState =
   | { type: "http"; index: number }
   | { type: "sql"; index: number };
 
-export default function ToolsSection<T extends FieldValues>({
-  control,
-  register,
-  setValue,
-}: ToolsSectionProps<T>) {
+export default function ToolsSection<T extends FieldValues & ToolsForm>(props: {
+  control: Control<T>;
+  register: UseFormRegister<T>;
+  setValue: UseFormSetValue<T>;
+}) {
+  // RHF's handles are invariant in the form type, so a `Control<AIAgentUpdate>`
+  // is not a `Control<ToolsForm>` even though the shapes agree. The constraint
+  // above is what checks the caller; this is the only cast in the file.
+  const { control, register, setValue } = props as unknown as ToolsSectionProps;
+
   const { translate: t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [editor, setEditor] = useState<EditorState>({ type: "closed" });
 
   // useFieldArray for structure (IDs) and operations (append/remove)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: "extra.tools" as any,
+    name: "extra.tools",
   });
 
   // useWatch for current values (fields has stale data after edits via register)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const toolsValues =
-    (useWatch({ control, name: "extra.tools" as any }) as ToolConfig[]) || [];
+  const toolsValues = useWatch({ control, name: "extra.tools" }) || [];
 
   // Combine fields (for IDs) with watched values (for current data)
   const allTools = fields.map((field, index) => ({
-    ...field,
-    ...(toolsValues[index] || {}),
+    ...(toolsValues[index] || field),
+    id: field.id,
     _index: index,
   }));
 
-  const googleTools = allTools.filter(
-    (tool): tool is LocalMCPToolConfig & { id: string; _index: number } =>
-      (tool as any).type === "mcp" &&
-      ["calendar", "sheets"].includes((tool as any).config?.product),
+  const mcpClients = allTools.filter((tool) => tool.type === "mcp");
+
+  const googleTools = mcpClients.filter((tool) =>
+    ["calendar", "sheets"].includes(tool.config.product ?? ""),
   );
 
-  const openbspTools = allTools.filter(
-    (tool): tool is LocalMCPToolConfig & { id: string; _index: number } =>
-      (tool as any).type === "mcp" &&
-      (tool as any).config?.product === "openbsp",
+  const openbspTools = mcpClients.filter(
+    (tool) => tool.config.product === "openbsp",
   );
 
-  const mcpTools = allTools.filter(
-    (tool): tool is LocalMCPToolConfig & { id: string; _index: number } =>
-      (tool as any).type === "mcp" &&
-      !["calendar", "sheets", "openbsp"].includes(
-        (tool as any).config?.product,
-      ),
+  // Anything not claimed above (including an unset product) is a plain client.
+  const mcpTools = mcpClients.filter(
+    (tool) =>
+      !["calendar", "sheets", "openbsp"].includes(tool.config.product ?? ""),
   );
 
-  const httpTools = allTools.filter(
-    (tool): tool is LocalHTTPToolConfig & { id: string; _index: number } =>
-      (tool as any).type === "http",
-  );
+  const httpTools = allTools.filter((tool) => tool.type === "http");
 
-  const sqlTools = allTools.filter(
-    (tool): tool is LocalSQLToolConfig & { id: string; _index: number } =>
-      (tool as any).type === "sql",
-  );
+  const sqlTools = allTools.filter((tool) => tool.type === "sql");
 
   // Simple tools (function type) - only one instance of each allowed
-  const simpleToolNames = ["calculator"] as const;
-  type SimpleToolName = (typeof simpleToolNames)[number];
+  type SimpleToolName = "calculator";
 
   const hasSimpleTool = (name: SimpleToolName): boolean => {
     return toolsValues.some(
-      (tool) =>
-        tool.type === "function" &&
-        (tool as LocalFunctionToolConfig).name === name,
+      (tool) => tool.type === "function" && tool.name === name,
     );
   };
 
@@ -124,9 +122,7 @@ export default function ToolsSection<T extends FieldValues>({
     if (hasSimpleTool(name)) {
       // Remove the tool
       const index = toolsValues.findIndex(
-        (tool) =>
-          tool.type === "function" &&
-          (tool as LocalFunctionToolConfig).name === name,
+        (tool) => tool.type === "function" && tool.name === name,
       );
       if (index !== -1) {
         remove(index);
@@ -138,7 +134,7 @@ export default function ToolsSection<T extends FieldValues>({
         type: "function",
         name,
       };
-      append(newTool as any);
+      append(newTool);
     }
   };
 
@@ -149,7 +145,7 @@ export default function ToolsSection<T extends FieldValues>({
       label: "",
       config: { url: "" },
     };
-    append(newTool as any);
+    append(newTool);
     setEditor({ type: "mcp", index: fields.length });
   };
 
@@ -162,7 +158,7 @@ export default function ToolsSection<T extends FieldValues>({
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       },
     };
-    append(newTool as any);
+    append(newTool);
     setEditor({ type: "http", index: fields.length });
   };
 
@@ -173,7 +169,7 @@ export default function ToolsSection<T extends FieldValues>({
       label: "",
       config: { driver: "libsql", url: "" },
     };
-    append(newTool as any);
+    append(newTool);
     setEditor({ type: "sql", index: fields.length });
   };
 
@@ -211,7 +207,7 @@ export default function ToolsSection<T extends FieldValues>({
         allowed_tools: defaultTools,
       },
     };
-    append(newTool as any);
+    append(newTool);
     setEditor({ type: "google-mcp", index: fields.length });
   };
 
@@ -235,7 +231,7 @@ export default function ToolsSection<T extends FieldValues>({
         allowed_tools: defaultTools,
       },
     };
-    append(newTool as any);
+    append(newTool);
     setEditor({ type: "openbsp-mcp", index: fields.length });
   };
 
@@ -354,7 +350,7 @@ export default function ToolsSection<T extends FieldValues>({
               <SectionItem
                 key={tool.id}
                 title={tool.label || t("Sin nombre")}
-                description={(tool.config as any)?.url || t("Sin URL base")}
+                description={tool.config.url || t("Sin URL base")}
                 aside={
                   <div className="p-[8px] bg-muted rounded-full">
                     <Globe className="w-[24px] h-[24px] text-muted-foreground" />
@@ -366,13 +362,12 @@ export default function ToolsSection<T extends FieldValues>({
 
             {/* Existing SQL Clients */}
             {sqlTools.map((tool) => {
-              const config = tool.config as any;
-              const driver = config.driver || "libsql";
               // Format: driver://host/db
+              const { config } = tool;
               const desc =
-                driver === "libsql"
-                  ? `${driver}://${config.url?.replace(/^.*:\/\//, "") || ""}`
-                  : `${driver}://${config.host || "localhost"}/${config.database || ""}`;
+                "url" in config
+                  ? `libsql://${config.url.replace(/^.*:\/\//, "")}`
+                  : `${config.driver}://${config.host || "localhost"}/${config.database || ""}`;
 
               return (
                 <SectionItem
@@ -433,7 +428,7 @@ export default function ToolsSection<T extends FieldValues>({
           register={register}
           control={control}
           setValue={setValue}
-          updateTool={(idx, data) => update(idx, data as any)}
+          updateTool={(idx, data) => update(idx, data)}
           onDelete={() => {
             handleDeleteTool(editor.index);
             setEditor({ type: "closed" });
@@ -504,7 +499,7 @@ export default function ToolsSection<T extends FieldValues>({
 }
 
 // MCP Client Editor
-function MCPClientEditor<T extends FieldValues>({
+function MCPClientEditor({
   index,
   register,
   control,
@@ -512,24 +507,22 @@ function MCPClientEditor<T extends FieldValues>({
   onBack,
 }: {
   index: number;
-  register: UseFormRegister<T>;
-  control: Control<T>;
+  register: UseFormRegister<ToolsForm>;
+  control: Control<ToolsForm>;
   onDelete: () => void;
   onBack: () => void;
 }) {
   const { translate: t } = useTranslation();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const label =
     (useWatch({
       control,
-      name: `extra.tools.${index}.label` as any,
+      name: `extra.tools.${index}.label`,
     }) as string) || "";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const url =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.url` as any,
+      name: `extra.tools.${index}.config.url`,
     }) as string) || "";
 
   const isValid = label.trim() !== "" && url.trim() !== "";
@@ -584,7 +577,7 @@ function MCPClientEditor<T extends FieldValues>({
             className="text"
             placeholder={t("Mi cliente MCP")}
             maxLength={32}
-            {...register(`extra.tools.${index}.label` as any, {
+            {...register(`extra.tools.${index}.label`, {
               required: true,
               maxLength: 40,
             })}
@@ -597,7 +590,7 @@ function MCPClientEditor<T extends FieldValues>({
             type="url"
             className="text"
             placeholder="https://mcp.example.com/sse"
-            {...register(`extra.tools.${index}.config.url` as any, {
+            {...register(`extra.tools.${index}.config.url`, {
               required: true,
             })}
           />
@@ -611,9 +604,7 @@ function MCPClientEditor<T extends FieldValues>({
             type="text"
             className="text"
             placeholder="Bearer sk-..."
-            {...register(
-              `extra.tools.${index}.config.headers.authorization` as any,
-            )}
+            {...register(`extra.tools.${index}.config.headers.authorization`)}
           />
         </label>
 
@@ -648,7 +639,7 @@ function MCPClientEditor<T extends FieldValues>({
 }
 
 // HTTP Client Editor
-function HTTPClientEditor<T extends FieldValues>({
+function HTTPClientEditor({
   index,
   register,
   control,
@@ -656,18 +647,17 @@ function HTTPClientEditor<T extends FieldValues>({
   onBack,
 }: {
   index: number;
-  register: UseFormRegister<T>;
-  control: Control<T>;
+  register: UseFormRegister<ToolsForm>;
+  control: Control<ToolsForm>;
   onDelete: () => void;
   onBack: () => void;
 }) {
   const { translate: t } = useTranslation();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const label =
     (useWatch({
       control,
-      name: `extra.tools.${index}.label` as any,
+      name: `extra.tools.${index}.label`,
     }) as string) || "";
 
   const isValid = label.trim() !== "";
@@ -722,7 +712,7 @@ function HTTPClientEditor<T extends FieldValues>({
             className="text"
             placeholder={t("Mi cliente HTTP")}
             maxLength={32}
-            {...register(`extra.tools.${index}.label` as any, {
+            {...register(`extra.tools.${index}.label`, {
               required: true,
               maxLength: 40,
             })}
@@ -730,8 +720,7 @@ function HTTPClientEditor<T extends FieldValues>({
         </label>
 
         <SelectField
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          name={`extra.tools.${index}.config.methods` as any}
+          name={`extra.tools.${index}.config.methods`}
           control={control}
           label={t("Métodos")}
           multiple
@@ -752,7 +741,7 @@ function HTTPClientEditor<T extends FieldValues>({
             type="url"
             className="text"
             placeholder="https://api.example.com/*"
-            {...register(`extra.tools.${index}.config.url` as any)}
+            {...register(`extra.tools.${index}.config.url`)}
           />
         </label>
         <p>
@@ -769,9 +758,7 @@ function HTTPClientEditor<T extends FieldValues>({
             type="text"
             className="text"
             placeholder="Bearer sk-..."
-            {...register(
-              `extra.tools.${index}.config.headers.authorization` as any,
-            )}
+            {...register(`extra.tools.${index}.config.headers.authorization`)}
           />
         </label>
 
@@ -806,7 +793,7 @@ function HTTPClientEditor<T extends FieldValues>({
 }
 
 // SQL Client Editor with driver-specific fields
-function SQLClientEditor<T extends FieldValues>({
+function SQLClientEditor({
   index,
   register,
   control,
@@ -815,37 +802,33 @@ function SQLClientEditor<T extends FieldValues>({
   onBack,
 }: {
   index: number;
-  register: UseFormRegister<T>;
-  control: Control<T>;
-  setValue: UseFormSetValue<T>;
+  register: UseFormRegister<ToolsForm>;
+  control: Control<ToolsForm>;
+  setValue: UseFormSetValue<ToolsForm>;
   onDelete: () => void;
   onBack: () => void;
 }) {
   const { translate: t } = useTranslation();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const label =
     (useWatch({
       control,
-      name: `extra.tools.${index}.label` as any,
+      name: `extra.tools.${index}.label`,
     }) as string) || "";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const driver =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.driver` as any,
+      name: `extra.tools.${index}.config.driver`,
     }) as string) || "libsql";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const url =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.url` as any,
+      name: `extra.tools.${index}.config.url`,
     }) as string) || "";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const host =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.host` as any,
+      name: `extra.tools.${index}.config.host`,
     }) as string) || "";
 
   // Validation depends on driver
@@ -859,10 +842,11 @@ function SQLClientEditor<T extends FieldValues>({
   const canGoBack = isValid || isEmpty;
 
   const handleDriverChange = (newDriver: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setValue(`extra.tools.${index}.config.driver` as any, newDriver as any, {
-      shouldDirty: true,
-    });
+    setValue(
+      `extra.tools.${index}.config.driver`,
+      newDriver as SQLToolConfig["driver"],
+      { shouldDirty: true },
+    );
   };
 
   const handleBack = () => {
@@ -911,7 +895,7 @@ function SQLClientEditor<T extends FieldValues>({
             className="text"
             placeholder={t("Mi base de datos")}
             maxLength={32}
-            {...register(`extra.tools.${index}.label` as any, {
+            {...register(`extra.tools.${index}.label`, {
               required: true,
               maxLength: 40,
             })}
@@ -939,7 +923,7 @@ function SQLClientEditor<T extends FieldValues>({
                 type="url"
                 className="text"
                 placeholder="libsql://your-database.turso.io"
-                {...register(`extra.tools.${index}.config.url` as any, {
+                {...register(`extra.tools.${index}.config.url`, {
                   required: true,
                 })}
               />
@@ -953,7 +937,7 @@ function SQLClientEditor<T extends FieldValues>({
                 type="text"
                 className="text"
                 placeholder="eyJhbGciOiJFZ..."
-                {...register(`extra.tools.${index}.config.token` as any)}
+                {...register(`extra.tools.${index}.config.token`)}
               />
             </label>
           </>
@@ -968,7 +952,7 @@ function SQLClientEditor<T extends FieldValues>({
                 type="text"
                 className="text"
                 placeholder="localhost"
-                {...register(`extra.tools.${index}.config.host` as any, {
+                {...register(`extra.tools.${index}.config.host`, {
                   required: true,
                 })}
               />
@@ -982,7 +966,7 @@ function SQLClientEditor<T extends FieldValues>({
                 type="number"
                 className="text"
                 placeholder={driver === "postgres" ? "5432" : "3306"}
-                {...register(`extra.tools.${index}.config.port` as any, {
+                {...register(`extra.tools.${index}.config.port`, {
                   valueAsNumber: true,
                 })}
               />
@@ -996,7 +980,7 @@ function SQLClientEditor<T extends FieldValues>({
                 type="text"
                 className="text"
                 placeholder={driver === "postgres" ? "postgres" : "root"}
-                {...register(`extra.tools.${index}.config.user` as any)}
+                {...register(`extra.tools.${index}.config.user`)}
               />
             </label>
 
@@ -1008,7 +992,7 @@ function SQLClientEditor<T extends FieldValues>({
                 type="text"
                 className="text"
                 placeholder={t("Contraseña")}
-                {...register(`extra.tools.${index}.config.password` as any)}
+                {...register(`extra.tools.${index}.config.password`)}
               />
             </label>
 
@@ -1020,7 +1004,7 @@ function SQLClientEditor<T extends FieldValues>({
                 type="text"
                 className="text"
                 placeholder="mydb"
-                {...register(`extra.tools.${index}.config.database` as any)}
+                {...register(`extra.tools.${index}.config.database`)}
               />
             </label>
           </>
@@ -1030,7 +1014,7 @@ function SQLClientEditor<T extends FieldValues>({
   );
 }
 // Google MCP Client Editor
-function GoogleMCPClientEditor<T extends FieldValues>({
+function GoogleMCPClientEditor({
   index,
   register,
   control,
@@ -1040,49 +1024,43 @@ function GoogleMCPClientEditor<T extends FieldValues>({
   onBack,
 }: {
   index: number;
-  register: UseFormRegister<T>;
-  control: Control<T>;
-  setValue: UseFormSetValue<T>;
+  register: UseFormRegister<ToolsForm>;
+  control: Control<ToolsForm>;
+  setValue: UseFormSetValue<ToolsForm>;
   updateTool: (index: number, data: ToolConfig) => void;
   onDelete: () => void;
   onBack: () => void;
 }) {
   const { translate: t } = useTranslation();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const product = useWatch({
     control,
-    name: `extra.tools.${index}.config.product` as any,
+    name: `extra.tools.${index}.config.product`,
   }) as string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const label =
     (useWatch({
       control,
-      name: `extra.tools.${index}.label` as any,
+      name: `extra.tools.${index}.label`,
     }) as string) || "";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const token =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.headers.authorization` as any,
+      name: `extra.tools.${index}.config.headers.authorization`,
     }) as string) || "";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const email =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.email` as any,
+      name: `extra.tools.${index}.config.email`,
     }) as string) || "";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const files =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.files` as any,
+      name: `extra.tools.${index}.config.files`,
     }) as string[]) || [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allowedTools =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.allowed_tools` as any,
+      name: `extra.tools.${index}.config.allowed_tools`,
     }) as string[]) || [];
 
   // Keep a ref with fresh values that the callback can access
@@ -1136,10 +1114,10 @@ function GoogleMCPClientEditor<T extends FieldValues>({
     );
 
     // Listen for message
-    const handleMessage = (event: MessageEvent) => {
+    const handleMessage = (event: MessageEvent<OAuthCallbackMessage>) => {
       if (event.origin !== window.location.origin) return;
 
-      if (event.data?.type === "oauth-callback" && event.data?.apiKey) {
+      if (event.data?.type === "oauth-callback" && event.data.apiKey) {
         // Build tool from fresh ref values (not stale closure data)
         const {
           label: freshLabel,
@@ -1171,10 +1149,9 @@ function GoogleMCPClientEditor<T extends FieldValues>({
         updateTool(index, updatedTool);
 
         // Explicitly set the token field to force dirty state
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setValue(
-          `extra.tools.${index}.config.headers.authorization` as any,
-          newToken as any,
+          `extra.tools.${index}.config.headers.authorization`,
+          newToken,
           { shouldDirty: true, shouldValidate: true, shouldTouch: true },
         );
 
@@ -1254,7 +1231,7 @@ function GoogleMCPClientEditor<T extends FieldValues>({
                 : t("Mi hoja de cálculo")
             }
             maxLength={32}
-            {...register(`extra.tools.${index}.label` as any, {
+            {...register(`extra.tools.${index}.label`, {
               required: true,
               maxLength: 40,
             })}
@@ -1283,10 +1260,9 @@ function GoogleMCPClientEditor<T extends FieldValues>({
         {/* Hidden input to register field for setValue to work */}
         <input
           type="hidden"
-          {...register(
-            `extra.tools.${index}.config.headers.authorization` as any,
-            { required: true },
-          )}
+          {...register(`extra.tools.${index}.config.headers.authorization`, {
+            required: true,
+          })}
         />
 
         {product === "sheets" && files.length > 0 && (
@@ -1307,8 +1283,7 @@ function GoogleMCPClientEditor<T extends FieldValues>({
         )}
 
         <SelectField
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          name={`extra.tools.${index}.config.allowed_tools` as any}
+          name={`extra.tools.${index}.config.allowed_tools`}
           control={control}
           label={t("Herramientas permitidas")}
           multiple
@@ -1322,7 +1297,7 @@ function GoogleMCPClientEditor<T extends FieldValues>({
 }
 
 // OpenBSP MCP Client Editor
-function OpenBSPMCPClientEditor<T extends FieldValues>({
+function OpenBSPMCPClientEditor({
   index,
   register,
   control,
@@ -1331,9 +1306,9 @@ function OpenBSPMCPClientEditor<T extends FieldValues>({
   onBack,
 }: {
   index: number;
-  register: UseFormRegister<T>;
-  control: Control<T>;
-  setValue: UseFormSetValue<T>;
+  register: UseFormRegister<ToolsForm>;
+  control: Control<ToolsForm>;
+  setValue: UseFormSetValue<ToolsForm>;
   onDelete: () => void;
   onBack: () => void;
 }) {
@@ -1346,47 +1321,45 @@ function OpenBSPMCPClientEditor<T extends FieldValues>({
   const { mutateAsync: createApiKey } = useCreateApiKey();
   const [autoAuthDone, setAutoAuthDone] = useState(false);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const label =
     (useWatch({
       control,
-      name: `extra.tools.${index}.label` as any,
+      name: `extra.tools.${index}.label`,
     }) as string) || "";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const token =
     (useWatch({
       control,
-      name: `extra.tools.${index}.config.headers.authorization` as any,
+      name: `extra.tools.${index}.config.headers.authorization`,
     }) as string) || "";
 
   // Auto-auth for owners: find or create an "OpenBSP MCP" API key
   const hasToken = token.trim() !== "";
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isOwner || autoAuthDone || hasToken || !apiKeys) return;
 
     const existing = apiKeys.find((k) => k.name === "OpenBSP MCP");
     if (existing) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setValue(
-        `extra.tools.${index}.config.headers.authorization` as any,
-        `Bearer ${existing.key}` as any,
+        `extra.tools.${index}.config.headers.authorization`,
+        `Bearer ${existing.key}`,
         { shouldDirty: true },
       );
       setAutoAuthDone(true);
     } else {
-      createApiKey({ name: "OpenBSP MCP", role: "member" }).then((newKey) => {
-        if (newKey) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setValue(
-            `extra.tools.${index}.config.headers.authorization` as any,
-            `Bearer ${newKey.key}` as any,
-            { shouldDirty: true },
-          );
-        }
-        setAutoAuthDone(true);
-      });
+      void createApiKey({ name: "OpenBSP MCP", role: "member" }).then(
+        (newKey) => {
+          if (newKey) {
+            setValue(
+              `extra.tools.${index}.config.headers.authorization`,
+              `Bearer ${newKey.key}`,
+              { shouldDirty: true },
+            );
+          }
+          setAutoAuthDone(true);
+        },
+      );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwner, apiKeys, autoAuthDone, hasToken]);
 
   const isValid = label.trim() !== "" && hasToken;
@@ -1447,7 +1420,7 @@ function OpenBSPMCPClientEditor<T extends FieldValues>({
             className="text"
             placeholder="Mis chats"
             maxLength={32}
-            {...register(`extra.tools.${index}.label` as any, {
+            {...register(`extra.tools.${index}.label`, {
               required: true,
               maxLength: 32,
             })}
@@ -1477,7 +1450,7 @@ function OpenBSPMCPClientEditor<T extends FieldValues>({
               className="text"
               placeholder="Bearer sk_..."
               {...register(
-                `extra.tools.${index}.config.headers.authorization` as any,
+                `extra.tools.${index}.config.headers.authorization`,
                 { required: true },
               )}
             />
@@ -1491,16 +1464,14 @@ function OpenBSPMCPClientEditor<T extends FieldValues>({
         {isOwner && (
           <input
             type="hidden"
-            {...register(
-              `extra.tools.${index}.config.headers.authorization` as any,
-              { required: true },
-            )}
+            {...register(`extra.tools.${index}.config.headers.authorization`, {
+              required: true,
+            })}
           />
         )}
 
         <SelectField
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          name={`extra.tools.${index}.config.allowed_tools` as any}
+          name={`extra.tools.${index}.config.allowed_tools`}
           control={control}
           label={t("Herramientas permitidas")}
           multiple

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase, type TemplateData } from "@/supabase/client";
+import { invokeFunction, type TemplateData } from "@/supabase/client";
 import useBoundStore from "@/stores/useBoundStore";
 
 export function useTemplates(organizationAddress?: string) {
@@ -10,7 +10,8 @@ export function useTemplates(organizationAddress?: string) {
     queryFn: async () => {
       if (!organizationAddress) return [];
 
-      const { data } = await supabase.functions.invoke(
+      // Meta wraps the list in `{ data: [...] }`.
+      const body = await invokeFunction<{ data?: TemplateData[] }>(
         "whatsapp-management/templates",
         {
           method: "PUT",
@@ -21,7 +22,7 @@ export function useTemplates(organizationAddress?: string) {
         },
       );
 
-      return (data.data as TemplateData[]) || [];
+      return body?.data || [];
     },
     enabled: !!activeOrgId && !!organizationAddress,
   });
@@ -39,19 +40,14 @@ export function useCreateTemplate() {
       template: TemplateData;
       organizationAddress: string;
     }) => {
-      const { error } = await supabase.functions.invoke(
-        "whatsapp-management/templates",
-        {
-          method: "POST",
-          body: {
-            organization_id: activeOrgId,
-            organization_address: organizationAddress,
-            template,
-          },
+      await invokeFunction<unknown>("whatsapp-management/templates", {
+        method: "POST",
+        body: {
+          organization_id: activeOrgId,
+          organization_address: organizationAddress,
+          template,
         },
-      );
-
-      if (error) throw error;
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -73,19 +69,14 @@ export function useUpdateTemplate() {
       template: TemplateData;
       organizationAddress: string;
     }) => {
-      const { error } = await supabase.functions.invoke(
-        "whatsapp-management/templates",
-        {
-          method: "PATCH",
-          body: {
-            organization_id: activeOrgId,
-            organization_address: organizationAddress,
-            template,
-          },
+      await invokeFunction<unknown>("whatsapp-management/templates", {
+        method: "PATCH",
+        body: {
+          organization_id: activeOrgId,
+          organization_address: organizationAddress,
+          template,
         },
-      );
-
-      if (error) throw error;
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -107,19 +98,14 @@ export function useDeleteTemplate() {
       template: TemplateData;
       organizationAddress: string;
     }) => {
-      const { error } = await supabase.functions.invoke(
-        "whatsapp-management/templates",
-        {
-          method: "DELETE",
-          body: {
-            organization_id: activeOrgId,
-            organization_address: organizationAddress,
-            template,
-          },
+      await invokeFunction<unknown>("whatsapp-management/templates", {
+        method: "DELETE",
+        body: {
+          organization_id: activeOrgId,
+          organization_address: organizationAddress,
+          template,
         },
-      );
-
-      if (error) throw error;
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

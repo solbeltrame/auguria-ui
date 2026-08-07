@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Database, supabase } from "@/supabase/client";
 import useBoundStore from "@/stores/useBoundStore";
-import { queryKeys } from "./queryKeys";
+import { type CachedResponse, queryKeys } from "./queryKeys";
 
 export type WebhookRow = Database["public"]["Tables"]["webhooks"]["Row"];
 export type WebhookInsert = Database["public"]["Tables"]["webhooks"]["Insert"];
@@ -65,10 +65,9 @@ export function useCreateWebhook() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.webhooks.all(orgId),
       });
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedResponse<WebhookRow>>(
         queryKeys.webhooks.detail(orgId, data.id),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (old: any) => (old ? { ...old, data } : { data, error: null }),
+        (old) => (old ? { ...old, data } : { data, error: null }),
       );
     },
   });
@@ -97,10 +96,9 @@ export function useUpdateWebhook() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.webhooks.all(orgId),
       });
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedResponse<WebhookRow>>(
         queryKeys.webhooks.detail(orgId, variables.id),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (old: any) => (old ? { ...old, data } : old),
+        (old) => (old ? { ...old, data } : old),
       );
     },
   });

@@ -1,4 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type FunctionInvokeOptions,
+} from "@supabase/supabase-js";
 import type { Database } from "./types/database_types";
 import type { IncomingMessage, OutgoingMessage } from "./types/message_types";
 import type { IncomingStatus, OutgoingStatus } from "./types/status_types";
@@ -37,6 +40,24 @@ export const supabase = createClient<Database>(
 supabase.realtime.reconnectAfterMs = (attempt: number) => {
   return Math.min(10 * 1000, attempt * 1000);
 };
+
+/**
+ * `functions.invoke` defaults its response body to `any` and types its failure
+ * branch as `{ error: any }`, so every caller that destructures it inherits an
+ * `any`. This is the one place that touches it: give it the body type you
+ * expect, and get either that body or a thrown error.
+ */
+export async function invokeFunction<T>(
+  name: string,
+  options?: FunctionInvokeOptions,
+): Promise<T | null> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- supabase-js types `error` as `any`
+  const { data, error } = await supabase.functions.invoke<T>(name, options);
+
+  if (error) throw error;
+
+  return data;
+}
 
 export type Status = IncomingStatus & OutgoingStatus;
 export type MessageTypes = IncomingMessage["type"] | OutgoingMessage["type"];

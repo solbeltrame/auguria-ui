@@ -101,11 +101,9 @@ export default function TemplatePreview({
       return;
     }
 
-    //@ts-expect-error Property 'id' does not exist on type 'NamedNodeMap'
-    const idx = Number(event.target.attributes.id.value) - 1;
+    const idx = Number(event.target.id) - 1;
 
-    //@ts-expect-error Property 'class' does not exist on type 'NamedNodeMap'
-    if (event.target.attributes.class.value.includes("templateHeader")) {
+    if (event.target.className.includes("templateHeader")) {
       headValues[idx] = event.target.textContent || "???";
       setHeadValues(headValues);
     } else {

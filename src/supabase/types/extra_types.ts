@@ -6,9 +6,19 @@
 // Pure UI-only additions (no API counterpart) live in ./ui_types.ts.
 //===================================
 
-// @ui-divergence: import Json instead of the API's SQLToolConfig (a server-only
-// dep the UI does not vendor).
-import type { Json } from "../db_types";
+// @ui-divergence: declare SQLToolConfig here instead of importing it. The API
+// infers it from a zod schema in a server-only module (agent-client/tools/sql)
+// that the UI does not vendor; this is that schema in plain TS.
+export type SQLToolConfig =
+  | { driver: "libsql"; url: string; token?: string }
+  | {
+      driver: "postgres" | "mysql";
+      host: string;
+      port?: number;
+      user?: string;
+      password?: string;
+      database?: string;
+    };
 
 export type Memory = {
   [key: string]: string | undefined | Memory;
@@ -206,8 +216,7 @@ export type LocalSQLToolConfig = {
   provider: "local";
   type: "sql";
   label: string; // database label
-  // @ui-divergence: `config` is Json (API: SQLToolConfig, not vendored UI-side).
-  config: Json;
+  config: SQLToolConfig;
 };
 
 export type LocalHTTPToolConfig = {

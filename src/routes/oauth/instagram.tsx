@@ -48,10 +48,10 @@ function InstagramOAuthCallback() {
     signup(
       { code, redirect_uri },
       {
-        onSuccess: (data: { address?: string }) =>
+        onSuccess: (data) =>
           navigate({
             to: "/integrations/instagram/$orgAddressId",
-            params: { orgAddressId: data.address ?? "" },
+            params: { orgAddressId: data?.address ?? "" },
             // Drop the `#_=_` artifact Instagram appends to the redirect.
             hash: "",
           }),

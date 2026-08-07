@@ -18,10 +18,14 @@ const useBoundStore = create<AppState>()(
     {
       name: "app-state",
       storage: createJSONStorage(() => localStorage, {
-        reviver: (_key, value: any) => {
-          // Just in case we decide to store maps
-          if (value && value.type === "map") {
-            return new Map(value);
+        reviver: (_key, value: unknown) => {
+          // Just in case we decide to store maps (see the replacer below)
+          const wrapped = value as {
+            type?: string;
+            value?: [string, unknown][];
+          } | null;
+          if (wrapped?.type === "map") {
+            return new Map(wrapped.value);
           }
           return value;
         },

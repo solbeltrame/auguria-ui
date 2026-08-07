@@ -131,11 +131,9 @@ export default function Chat() {
 
     let prevMsg: EnvelopeType | null = null;
 
-    for (const [_index, env] of chat
-      .map(
-        (message) => ({ message, first: false, last: false }) as EnvelopeType,
-      )
-      .entries()) {
+    for (const env of chat.map(
+      (message) => ({ message, first: false, last: false }) as EnvelopeType,
+    )) {
       if (!prevMsg) {
         env.first = true;
         env.last = true;

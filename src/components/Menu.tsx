@@ -22,6 +22,10 @@ import { useOrganizations } from "@/queries/useOrganizations";
 
 export default function Menu() {
   const user = useBoundStore((state) => state.ui.user);
+  // Supabase types user_metadata as Record<string, any>; this is what SSO fills.
+  const userMetadata = user?.user_metadata as
+    | { picture?: string; name?: string }
+    | undefined;
 
   const { data: agent } = useCurrentAgent();
 
@@ -187,10 +191,10 @@ export default function Menu() {
         >
           <div className="cursor-pointer mt-[10px] p-[2px] rounded-full hover:bg-muted">
             <Avatar
-              src={agent?.picture || user?.user_metadata?.picture}
+              src={agent?.picture || userMetadata?.picture}
               fallback={(
                 agent?.name ||
-                user?.user_metadata?.name ||
+                userMetadata?.name ||
                 user?.email ||
                 "?"
               ).charAt(0)}

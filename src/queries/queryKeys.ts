@@ -1,5 +1,12 @@
 type NullableId = string | null | undefined;
 
+/**
+ * Detail queries cache the raw Supabase response and unwrap it with `select`,
+ * so a mutation has to merge the fresh row into that wrapper — writing a bare
+ * row would make `select` read `undefined`.
+ */
+export type CachedResponse<T> = { data: T; error: null };
+
 export const queryKeys = {
   agents: {
     all: (orgId: NullableId) => [orgId, "agents"] as const,

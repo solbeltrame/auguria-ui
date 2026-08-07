@@ -7,6 +7,11 @@ interface MessageCache {
   lastFetched: number; // Timestamp of the latest fetch
 }
 
+interface AuthorizedCache {
+  authorizedOrgs: string[];
+  authorizedAddresses: string[];
+}
+
 const MSGS_CACHE_KEY = "messages_cache";
 const AUTH_CACHE_KEY = "authorized_cache";
 const CACHE_TTL = 60 * 24 * 60 * 60 * 1000; // 60 days in ms
@@ -132,15 +137,12 @@ export const updateMessagesCache = async (
 };
 
 // Authorized orgs and addresses cache methods
-export const updateAuthorizedCache = async (authData: {
-  authorizedOrgs: string[];
-  authorizedAddresses: string[];
-}) => {
+export const updateAuthorizedCache = async (authData: AuthorizedCache) => {
   await set(AUTH_CACHE_KEY, authData);
 };
 
 export const getAuthorizedCache = async () => {
-  return await get(AUTH_CACHE_KEY);
+  return await get<AuthorizedCache>(AUTH_CACHE_KEY);
 };
 
 export const resetAuthorizedCache = async () => {

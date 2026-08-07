@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/supabase/client";
+import { invokeFunction } from "@/supabase/client";
 import useBoundStore from "@/stores/useBoundStore";
 import { queryKeys } from "./queryKeys";
 
@@ -33,14 +33,14 @@ async function invoke<T>(
   method: "GET" | "POST" | "DELETE",
   body?: unknown,
 ): Promise<T> {
-  const { data, error } = await supabase.functions.invoke(`${FN}/${path}`, {
+  const data = await invokeFunction<T>(`${FN}/${path}`, {
     method,
     ...(body ? { body } : {}),
   });
 
-  if (error) throw error;
+  if (!data) throw new Error(`Empty response from ${path}`);
 
-  return data as T;
+  return data;
 }
 
 // 3.1 Start pairing — QR (no phone) or code (with phone). Owner only.

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ApiKeyInsert, type ApiKeyRow, supabase } from "@/supabase/client";
 import useBoundStore from "@/stores/useBoundStore";
-import { queryKeys } from "./queryKeys";
+import { type CachedResponse, queryKeys } from "./queryKeys";
 
 export function useApiKeys() {
   const userId = useBoundStore((state) => state.ui.user?.id);
@@ -63,10 +63,9 @@ export function useCreateApiKey() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys.all(orgId) });
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedResponse<ApiKeyRow>>(
         queryKeys.apiKeys.detail(orgId, data.id),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (old: any) => (old ? { ...old, data } : { data, error: null }),
+        (old) => (old ? { ...old, data } : { data, error: null }),
       );
     },
   });

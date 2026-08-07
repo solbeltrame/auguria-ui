@@ -57,8 +57,11 @@ darkModeMediaQuery.addEventListener("change", updateTheme);
 // Preload translations before rendering
 function detectLanguage(): Language {
   try {
-    const stored = JSON.parse(localStorage.getItem("app-state") || "{}");
-    if (stored?.state?.ui?.language) return stored.state.ui.language;
+    const stored = JSON.parse(localStorage.getItem("app-state") || "{}") as {
+      state?: { ui?: { language?: Language } };
+    };
+    const language = stored.state?.ui?.language;
+    if (language) return language;
   } catch {
     /* ignore */
   }

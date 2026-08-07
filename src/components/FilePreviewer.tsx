@@ -40,6 +40,9 @@ const FilePreviewer = () => {
   const setConversationTextDraft = useBoundStore(
     (store) => store.chat.setConversationTextDraft,
   );
+  const draft = useBoundStore((store) =>
+    store.chat.membershipExtras.get(store.ui.activeConvId || ""),
+  )?.draft;
   const sendAsContact = useBoundStore((store) => store.ui.sendAsContact);
   const setMediaLoad = useBoundStore((store) => store.chat.setMediaLoad);
 
@@ -183,7 +186,7 @@ const FilePreviewer = () => {
     }
 
     setConversationTextDraft(activeConvId, "");
-    (conv.extra as any)?.draft && saveDraft(conv, "", sendAsContact);
+    draft && saveDraft(conv, "", sendAsContact);
     resetFiles();
   };
 

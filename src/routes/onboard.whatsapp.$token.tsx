@@ -15,6 +15,23 @@ type TokenValidation =
   | { status: "success" }
   | { status: "error"; message: string };
 
+/** What GET /whatsapp-management/onboard answers. */
+type OnboardToken = { valid: boolean; organization_name?: string };
+
+async function validateToken(token: string): Promise<TokenValidation> {
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-management/onboard?token=${token}`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+    },
+  });
+  const data = (await res.json()) as OnboardToken;
+
+  return data.valid
+    ? { status: "valid", organization_name: data.organization_name ?? "" }
+    : { status: "invalid" };
+}
+
 function Onboard() {
   const { token } = Route.useParams();
   const { translate: t } = useTranslation();
@@ -23,9 +40,7 @@ function Onboard() {
   // The Facebook SDK loads asynchronously from connect.facebook.net, which is
   // commonly blocked by tracking protection / ad blockers. If it fails to load,
   // show the error up front instead of a button that cannot work.
-  const [sdkFailed, setSdkFailed] = useState(
-    () => !!(window as any).__fbSdkFailed,
-  );
+  const [sdkFailed, setSdkFailed] = useState(() => !!window.__fbSdkFailed);
 
   useEffect(() => {
     const onFail = () => setSdkFailed(true);
@@ -34,30 +49,13 @@ function Onboard() {
   }, []);
 
   useEffect(() => {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-management/onboard?token=${token}`;
-    fetch(url, {
-      headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.valid) {
-          setState({
-            status: "valid",
-            organization_name: data.organization_name,
-          });
-        } else {
-          setState({ status: "invalid" });
-        }
-      })
-      .catch(() => {
-        setState({ status: "invalid" });
-      });
+    validateToken(token)
+      .then(setState)
+      .catch(() => setState({ status: "invalid" }));
   }, [token]);
 
   const handleSignup = useCallback(() => {
-    const FB = (window as any).FB;
+    const FB = window.FB;
 
     if (!FB) {
       // The SDK is served from connect.facebook.net, which tracking protection
@@ -72,7 +70,7 @@ function Onboard() {
     }
 
     FB.login(
-      function (response: any) {
+      function (response: FBLoginResponse) {
         if (response.authResponse) {
           const code = response.authResponse.code;
 
@@ -82,7 +80,7 @@ function Onboard() {
 
           setLoading(true);
 
-          const sessionInfo = (window as any).__waSessionInfo || {};
+          const sessionInfo: WASessionInfo = window.__waSessionInfo ?? {};
 
           const payload: SignupPayload = {
             code,
@@ -238,23 +236,8 @@ function Onboard() {
                   organization_name: "",
                 });
                 // Re-validate token
-                const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-management/onboard?token=${token}`;
-                fetch(url, {
-                  headers: {
-                    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                  },
-                })
-                  .then((res) => res.json())
-                  .then((data) => {
-                    if (data.valid) {
-                      setState({
-                        status: "valid",
-                        organization_name: data.organization_name,
-                      });
-                    } else {
-                      setState({ status: "invalid" });
-                    }
-                  })
+                validateToken(token)
+                  .then(setState)
                   .catch(() => setState({ status: "invalid" }));
               }}
             >
