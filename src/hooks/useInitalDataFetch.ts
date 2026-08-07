@@ -10,6 +10,7 @@ type InitDataResponse = {
 
 export const useInitialDataFetch = () => {
   const activeOrgId = useBoundStore((state) => state.ui.activeOrgId);
+  const userId = useBoundStore((state) => state.ui.user?.id);
 
   const lastVisibleAt = useRef<Date | null>(null);
 
@@ -17,6 +18,38 @@ export const useInitialDataFetch = () => {
     (state) => state.chat.pushConversations,
   );
   const pushMessages = useBoundStore((state) => state.chat.pushMessages);
+  const setOwnAgentId = useBoundStore((state) => state.chat.setOwnAgentId);
+  const pushMembershipExtras = useBoundStore(
+    (state) => state.chat.pushMembershipExtras,
+  );
+
+  // The caller's own agent id and per-conversation state
+  // (conversations_agents.extra: archived/pinned/draft).
+  const loadMemberships = async () => {
+    if (!activeOrgId || !userId) return;
+
+    const { data: agent } = await supabase
+      .from("agents")
+      .select("id")
+      .eq("organization_id", activeOrgId)
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .maybeSingle()
+      .throwOnError();
+
+    setOwnAgentId(agent?.id || null);
+
+    if (!agent) return;
+
+    const { data: memberships } = await supabase
+      .from("conversations_agents")
+      .select("conversation_id, extra")
+      .eq("organization_id", activeOrgId)
+      .eq("agent_id", agent.id)
+      .throwOnError();
+
+    pushMembershipExtras(memberships);
+  };
 
   const PHASE1_LIMIT = 200;
 
@@ -87,9 +120,11 @@ export const useInitialDataFetch = () => {
 
   useEffect(() => {
     initData();
+    loadMemberships();
 
     lastVisibleAt.current = new Date();
-  }, [activeOrgId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeOrgId, userId]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {

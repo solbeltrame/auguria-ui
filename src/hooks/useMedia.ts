@@ -4,11 +4,10 @@ import useBoundStore from "@/stores/useBoundStore";
 import {
   type MessageInsert,
   type MessageRow,
-  supabase,
-} from "@/supabase/client";
+  supabase, messageDirection } from "@/supabase/client";
 
 export function useMedia(message: MessageRow) {
-  if (!(message.direction === "incoming" || message.direction === "outgoing")) {
+  if (!(messageDirection(message) === "incoming" || messageDirection(message) === "outgoing")) {
     throw new Error(
       `Message with id ${message.id} is not an incoming or outgoing message.`,
     );

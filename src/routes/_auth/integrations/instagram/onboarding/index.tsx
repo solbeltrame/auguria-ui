@@ -19,7 +19,7 @@ function OnboardingIndex() {
   const navigate = useNavigate();
   const { data: tokens } = useOnboardingTokens("instagram");
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
 
   function getStatus(token: {
     status: string;

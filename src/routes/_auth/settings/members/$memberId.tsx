@@ -14,8 +14,6 @@ import useBoundStore from "@/stores/useBoundStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import type { HumanAgentRow, HumanAgentUpdate } from "@/supabase/client";
-import SectionItem from "@/components/SectionItem";
-import { Bell } from "lucide-react";
 import Button from "@/components/Button";
 import SelectField from "@/components/SelectField";
 import { queryKeys } from "@/queries/queryKeys";
@@ -31,15 +29,15 @@ function EditMember() {
   const { data: agent } = useAgent<HumanAgentRow>(memberId);
   const { data: allAgents } = useCurrentAgents(); // Fetch all agents to check for owners
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
   const isMe = currentAgent?.id === memberId;
   const setActiveOrg = useBoundStore((state) => state.ui.setActiveOrg);
   const queryClient = useQueryClient();
 
   // Count owners to prevent deleting the last one
   const ownersCount =
-    allAgents?.filter((a) => !a.ai && a.extra?.role === "owner").length || 0;
-  const isLastOwner = agent?.extra?.role === "owner" && ownersCount <= 1;
+    allAgents?.filter((a) => a.user_id !== null && a.role === "owner").length || 0;
+  const isLastOwner = agent?.role === "owner" && ownersCount <= 1;
 
   const updateAgent = useUpdateAgent();
   const deleteAgent = useDeleteAgent();
@@ -72,8 +70,6 @@ function EditMember() {
 
   if (!agent) return;
 
-  const invitation = agent.extra?.invitation;
-
   return (
     <>
       <SectionHeader
@@ -95,18 +91,6 @@ function EditMember() {
           id="member-form"
           onSubmit={handleSubmit((data) => updateAgent.mutate(data))}
         >
-          {invitation && invitation.status === "pending" && (
-            <SectionItem
-              title={t("Invitación pendiente")}
-              aside={
-                <div className="p-[8px]">
-                  <Bell className="w-[24px] h-[24px] text-primary" />
-                </div>
-              }
-              className="bg-primary/10"
-            />
-          )}
-
           <label>
             <div className="label">{t("Nombre")}</div>
             <input
@@ -118,7 +102,7 @@ function EditMember() {
           </label>
 
           <SelectField
-            name="extra.role"
+            name="role"
             control={control}
             label={t("Rol")}
             options={[
@@ -130,18 +114,6 @@ function EditMember() {
             required
           />
 
-          {invitation && invitation.email && (
-            <label>
-              <div className="label">{t("Correo electrónico")}</div>
-              <input
-                type="email"
-                className="text"
-                readOnly
-                placeholder={t("usuario@ejemplo.com")}
-                {...register("extra.invitation.email")}
-              />
-            </label>
-          )}
         </form>
       </SectionBody>
 

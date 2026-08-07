@@ -4,6 +4,8 @@ import {
   type AgentRow,
   type AgentUpdate,
   type HumanAgentRow,
+  type InvitationInsert,
+  type InvitationRow,
   supabase,
 } from "@/supabase/client";
 import useBoundStore from "@/stores/useBoundStore";
@@ -28,21 +30,122 @@ export function useAgent<T = AgentRow>(id: string) {
   });
 }
 
+// The signed-in user's own pending invitations, across organizations —
+// invitations are their own table now, keyed by email. RLS lets members also
+// see their orgs' invitations, so filter to the caller's email explicitly.
 export function useInvitations() {
-  const userId = useBoundStore((state) => state.ui.user?.id);
+  const email = useBoundStore((state) => state.ui.user?.email);
 
   return useQuery({
-    queryKey: queryKeys.agents.invitations(),
+    queryKey: queryKeys.invitations.mine(),
     queryFn: async () =>
       await supabase
-        .from("agents")
+        .from("invitations")
         .select()
-        .eq("user_id", userId!)
-        .eq("extra->invitation->>status", "pending")
+        .eq("status", "pending")
+        .ilike("email", email!)
         .throwOnError(),
-    enabled: !!userId,
-    select: (data) => data.data as HumanAgentRow[],
+    enabled: !!email,
+    select: (data) => data.data as InvitationRow[],
     experimental_prefetchInRender: true,
+  });
+}
+
+// The active organization's pending invitations (members list).
+export function useOrgInvitations() {
+  const orgId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useQuery({
+    queryKey: queryKeys.invitations.all(orgId),
+    queryFn: async () =>
+      await supabase
+        .from("invitations")
+        .select()
+        .eq("organization_id", orgId!)
+        .eq("status", "pending")
+        .throwOnError(),
+    enabled: !!orgId,
+    select: (data) => data.data as InvitationRow[],
+  });
+}
+
+export function useCreateInvitation() {
+  const queryClient = useQueryClient();
+  const orgId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async (data: Omit<InvitationInsert, "organization_id">) => {
+      if (!orgId) throw new Error("No active organization");
+
+      const { data: invitation } = await supabase
+        .from("invitations")
+        .insert({ ...data, organization_id: orgId })
+        .select()
+        .single()
+        .throwOnError();
+
+      return invitation;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invitations.all(orgId),
+      });
+    },
+  });
+}
+
+export function useRevokeInvitation() {
+  const queryClient = useQueryClient();
+  const orgId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async (invitationId: string) => {
+      await supabase
+        .from("invitations")
+        .update({ status: "revoked" })
+        .eq("id", invitationId)
+        .throwOnError();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invitations.all(orgId),
+      });
+    },
+  });
+}
+
+// Answering an invitation crosses the membership boundary, so it goes through
+// the accept_invitation / reject_invitation RPCs — the invitee holds SELECT on
+// invitations and nothing else.
+export function useAnswerInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      invitationId,
+      answer,
+    }: {
+      invitationId: string;
+      answer: "accepted" | "rejected";
+    }) => {
+      if (answer === "accepted") {
+        await supabase
+          .rpc("accept_invitation", { invitation_id: invitationId })
+          .throwOnError();
+      } else {
+        await supabase
+          .rpc("reject_invitation", { invitation_id: invitationId })
+          .throwOnError();
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invitations.mine(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all(),
+      });
+    },
   });
 }
 
@@ -58,7 +161,7 @@ export function useCurrentAgent() {
         .select()
         .eq("organization_id", orgId!)
         .eq("user_id", userId!)
-        .is("ai", false)
+        .is("deleted_at", null)
         .throwOnError()
         .single(),
     enabled: !!userId && !!orgId,
@@ -77,6 +180,7 @@ export function useCurrentAgents() {
         .from("agents")
         .select()
         .eq("organization_id", orgId!)
+        .is("deleted_at", null)
         .throwOnError(),
     enabled: !!userId && !!orgId,
     select: (data) => data.data,

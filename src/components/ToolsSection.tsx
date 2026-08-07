@@ -1340,7 +1340,7 @@ function OpenBSPMCPClientEditor<T extends FieldValues>({
   const { translate: t } = useTranslation();
 
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
 
   const { data: apiKeys } = useApiKeys();
   const { mutateAsync: createApiKey } = useCreateApiKey();

@@ -20,7 +20,7 @@ export default function WhatsAppIntegration({
   const orgId = useBoundStore((state) => state.ui.activeOrgId);
   const [loading, setLoading] = useState(false);
   const { data: agent } = useCurrentAgent();
-  const isOwner = agent?.extra?.role === "owner";
+  const isOwner = agent?.role === "owner";
   // The Facebook SDK loads asynchronously from connect.facebook.net, which is
   // commonly blocked by tracking protection / ad blockers. If it fails to load,
   // show the error up front instead of a button that cannot work.

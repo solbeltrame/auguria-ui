@@ -28,7 +28,7 @@ function WhatsAppWebDetails() {
 
   if (!integration) return;
 
-  const isOwner = agent?.extra?.role === "owner";
+  const isOwner = agent?.role === "owner";
   const isConnected = integration.status === "connected";
 
   // Durable row status is the source of truth; live health refines the label.

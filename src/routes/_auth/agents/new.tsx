@@ -86,7 +86,7 @@ function AddAgent() {
   const navigate = useNavigate();
   const createAgent = useCreateAgent();
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.extra?.role || "");
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
   const [provider, setProvider] = useState<keyof typeof protocols>("groq");
 
   const {
@@ -111,7 +111,7 @@ function AddAgent() {
 
   const onSubmit = (data: AIAgentInsert) => {
     createAgent.mutate(
-      { ...data, ai: true },
+      data,
       {
         onSuccess: (agent) =>
           navigate({

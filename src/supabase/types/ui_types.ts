@@ -7,22 +7,44 @@
 // `// @ui-divergence`). See scripts/check-type-sync.sh.
 //===================================
 
-// Narrowed insert/update shapes for the human-agent `extra` column, used by the
-// members forms. The API has no insert/update variants of HumanAgentExtra.
-export type HumanAgentExtraInsert = {
-  role: "member" | "admin" | "owner";
-  invitation?: {
-    organization_name: string;
-    email: string;
-    status: "pending";
-  };
+// The member's own per-conversation state, stored on their conversations_agents
+// row (the API leaves that column untyped — "e.g. per-member state: muted,
+// last_read_ts"). Written via upsert on the caller's own membership row; nulls
+// retract keys through the merge_update trigger.
+export type ConversationAgentExtra = {
+  archived?: string | null;
+  pinned?: string | null;
+  draft?: {
+    text: string;
+    origin: string;
+    timestamp: string;
+  } | null;
 };
 
-export type HumanAgentExtraUpdate = {
-  role?: "member" | "admin" | "owner";
-  invitation?: {
-    organization_name?: string;
-    email?: string;
-    status?: "pending" | "accepted" | "rejected";
-  };
-};
+import { isInternal } from "./message_types";
+import type { MessageRow } from "./database_types";
+
+export type Direction = "incoming" | "outgoing" | "internal";
+
+// `messages.direction` is gone: authorship is the addressing. Incoming =
+// sender_address set (the contact authored it), outgoing = null (us), and
+// record-only rows carry the `content.internal` marker.
+export function messageDirection(
+  message: Pick<MessageRow, "sender_address" | "content">,
+): Direction {
+  if (isInternal(message)) return "internal";
+
+  return message.sender_address !== null ? "incoming" : "outgoing";
+}
+
+export function isIncoming(
+  message: Pick<MessageRow, "sender_address" | "content">,
+): boolean {
+  return messageDirection(message) === "incoming";
+}
+
+export function isOutgoing(
+  message: Pick<MessageRow, "sender_address" | "content">,
+): boolean {
+  return messageDirection(message) === "outgoing";
+}

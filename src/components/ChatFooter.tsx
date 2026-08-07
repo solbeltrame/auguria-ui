@@ -11,8 +11,7 @@ import { type FileDraft } from "@/stores/chatSlice";
 import {
   type Draft,
   type MessageRow,
-  type TemplateMessage,
-} from "@/supabase/client";
+  type TemplateMessage, isIncoming } from "@/supabase/client";
 import { TickContext } from "@/contexts/useTick";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
@@ -78,7 +77,9 @@ export default function ChatFooter() {
   const conv = useBoundStore((store) =>
     store.chat.conversations.get(store.ui.activeConvId || ""),
   );
-  const draft: Draft | null | undefined = conv?.extra?.draft;
+  const draft: Draft | null | undefined = useBoundStore(
+    (store) => store.chat.membershipExtras.get(store.ui.activeConvId || ""),
+  )?.draft;
   const sendAsContact = useBoundStore((store) => store.ui.sendAsContact);
   const setSendAsContact = useBoundStore((store) => store.ui.setSendAsContact);
   const toggle = useBoundStore((store) => store.ui.toggle);
@@ -125,7 +126,7 @@ export default function ChatFooter() {
     }
 
     for (const msg of msgs) {
-      if (msg.direction === "incoming") {
+      if (isIncoming(msg)) {
         return msg;
       }
     }
@@ -252,7 +253,6 @@ export default function ChatFooter() {
 
     const record = newMessage(
       conv,
-      sendAsContact ? "incoming" : "outgoing",
       {
         version: "1",
         type: "text",
@@ -260,9 +260,11 @@ export default function ChatFooter() {
         text: message,
       },
       agentId,
+      undefined,
+      sendAsContact,
     );
 
-    pushMessageToStore(record);
+    pushMessageToStore({ ...record, conversation_id: conv.id });
     await pushMessageToDb(record);
 
     setMessage("");
@@ -356,7 +358,6 @@ export default function ChatFooter() {
 
     const record = newMessage(
       conv,
-      "outgoing",
       {
         version: "1",
         type: "data",

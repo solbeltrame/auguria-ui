@@ -19,7 +19,7 @@ function ApiKeyDetail() {
   const { apiKeyId } = Route.useParams();
   const { data: apiKey } = useApiKey(apiKeyId);
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
   const deleteApiKey = useDeleteApiKey();
 
   const { register } = useForm<ApiKeyUpdate>({

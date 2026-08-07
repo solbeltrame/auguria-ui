@@ -2,14 +2,19 @@ import type { StateCreator } from "zustand";
 import type { User } from "@supabase/supabase-js";
 import type { AppState } from "./useBoundStore";
 import dayjs from "dayjs";
-import type {
-  ConversationRow,
-  MessageRow,
-  TemplateData,
+import {
+  type ConversationAgentExtra,
+  type ConversationRow,
+  type MessageRow,
+  type TemplateData,
+  isIncoming,
 } from "@/supabase/client";
 
-export function isArchived(conv: ConversationRow, msg?: MessageRow) {
-  const archivedTimestamp: string | null | undefined = conv.extra?.archived;
+export function isArchived(
+  extra: ConversationAgentExtra | undefined,
+  msg?: MessageRow,
+) {
+  const archivedTimestamp: string | null | undefined = extra?.archived;
 
   return +new Date(archivedTimestamp || 0) > +new Date(msg?.timestamp || 0);
 }
@@ -24,15 +29,19 @@ export const Filters = {
 export type Filters = (typeof Filters)[keyof typeof Filters];
 
 export const filters: {
-  [key in Filters]: (conv: ConversationRow, msg?: MessageRow) => boolean;
+  [key in Filters]: (
+    conv: ConversationRow,
+    msg?: MessageRow,
+    extra?: ConversationAgentExtra,
+  ) => boolean;
 } = {
-  todas: (conv, msg) => !isArchived(conv, msg),
-  pendientes: (conv, msg) =>
-    !isArchived(conv, msg) && msg?.direction === "incoming",
-  "24h": (conv, msg) =>
-    !isArchived(conv, msg) &&
+  todas: (_conv, msg, extra) => !isArchived(extra, msg),
+  pendientes: (_conv, msg, extra) =>
+    !isArchived(extra, msg) && !!msg && isIncoming(msg),
+  "24h": (_conv, msg, extra) =>
+    !isArchived(extra, msg) &&
     dayjs(msg?.timestamp || 0).isAfter(dayjs().subtract(1, "day")),
-  archivadas: (conv, msg) => isArchived(conv, msg),
+  archivadas: (_conv, msg, extra) => isArchived(extra, msg),
 } as const;
 
 export type TemplateDraft = {

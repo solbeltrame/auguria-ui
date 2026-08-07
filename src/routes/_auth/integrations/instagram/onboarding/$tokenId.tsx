@@ -23,7 +23,7 @@ function OnboardingTokenDetail() {
   const { data: tokens } = useOnboardingTokens("instagram");
   const { data: currentAgent } = useCurrentAgent();
   const deleteToken = useDeleteOnboardingToken("instagram");
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
   const [copied, setCopied] = useState(false);
 
   const token = tokens?.find((tk) => tk.id === tokenId);

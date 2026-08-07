@@ -12,9 +12,10 @@ export type ConvMetadata = {
   mostRecentMsg?: MessageRow;
 };
 
-function pinnedAscending(a: ConversationRow, b: ConversationRow) {
-  const aPin = a.extra?.pinned;
-  const bPin = b.extra?.pinned;
+function pinnedAscending(
+  aPin: string | null | undefined,
+  bPin: string | null | undefined,
+) {
 
   if (!aPin && !bPin) {
     return 0;
@@ -32,6 +33,7 @@ const ChatList = () => {
   const activeOrgId = useBoundStore((state) => state.ui.activeOrgId);
   const conversations = useBoundStore((state) => state.chat.conversations);
   const messages = useBoundStore((state) => state.chat.messages);
+  const membershipExtras = useBoundStore((state) => state.chat.membershipExtras);
   const filterName = useBoundStore((state) => state.ui.filter);
   const setFilterName = useBoundStore((state) => state.ui.setFilter);
   const searchPattern = useBoundStore((state) => state.ui.searchPattern);
@@ -54,20 +56,27 @@ const ChatList = () => {
     .filter(
       (a) =>
         a.conv.organization_id === activeOrgId &&
-        filters[filterName](a.conv, a.mostRecentMsg) &&
+        filters[filterName](
+          a.conv,
+          a.mostRecentMsg,
+          membershipExtras.get(a.convId),
+        ) &&
         !!a.mostRecentMsg,
     );
 
   if (searchPattern) {
     const fuse = new Fuse(items, {
       threshold: 0.4,
-      keys: ["conv.name", "conv.contact_address"],
+      keys: ["conv.name", "conv.address"],
     });
     items = fuse.search(searchPattern).map((r) => r.item);
   } else {
     items.sort(
       (a, b) =>
-        pinnedAscending(a.conv, b.conv) ||
+        pinnedAscending(
+          membershipExtras.get(a.convId)?.pinned,
+          membershipExtras.get(b.convId)?.pinned,
+        ) ||
         timestampDescending(a.mostRecentMsg, b.mostRecentMsg),
     );
   }

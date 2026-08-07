@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import StatusIcon from "./StatusIcon";
 import { useMedia } from "@/hooks/useMedia";
-import { type MessageRow, type OutgoingStatus } from "@/supabase/client";
+import { type MessageRow, type OutgoingStatus, messageDirection } from "@/supabase/client";
 import dayjs from "dayjs";
 import { Markdown } from "./Message";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -63,7 +63,7 @@ export function isImage(type: string) {
 }
 
 export default function DocumentMessage(message: MessageRow) {
-  if (!(message.direction === "incoming" || message.direction === "outgoing")) {
+  if (!(messageDirection(message) === "incoming" || messageDirection(message) === "outgoing")) {
     throw new Error(`Message with id ${message.id} is not a BaseMessage.`);
   }
 
@@ -130,10 +130,10 @@ export default function DocumentMessage(message: MessageRow) {
           <div>{media.name || mediaType(media.mime_type)}</div>
           <div className="text-muted-foreground py-[3px] text-[12px]">
             <span className="uppercase">{extension(media.name)}</span>
-            {media.name && !isNaN(media.size) && (
+            {media.name && !isNaN(media.size ?? NaN) && (
               <span className="mx-[3px]">•</span>
             )}
-            <span>{fileSize(media.size)}</span>
+            <span>{fileSize(media.size ?? NaN)}</span>
           </div>
         </div>
 
@@ -165,7 +165,7 @@ export default function DocumentMessage(message: MessageRow) {
         <div className="pl-[6px] pt-[6px] pb-[5px] pr-[4px]">
           <Markdown
             content={content.text || ""}
-            direction={message.direction}
+            direction={messageDirection(message)}
           />
         </div>
       )}
@@ -191,7 +191,7 @@ export default function DocumentMessage(message: MessageRow) {
                     ? description.text || ""
                     : "";
                 })()}
-                direction={message.direction}
+                direction={messageDirection(message)}
               />
             )}
             <div
@@ -208,7 +208,7 @@ export default function DocumentMessage(message: MessageRow) {
       {/* Timestamp */}
       <div className="text-[11px] text-muted-foreground absolute bottom-[0px] right-[7px] flex items-center">
         {dayjs(message.timestamp).format("HH:mm")}
-        {message.direction === "outgoing" && (
+        {messageDirection(message) === "outgoing" && (
           <StatusIcon {...(message.status as OutgoingStatus)} />
         )}
       </div>

@@ -156,7 +156,6 @@ const FilePreviewer = () => {
 
       const record = newMessage(
         conv,
-        sendAsContact ? "incoming" : "outgoing",
         {
           version: "1",
           type: "file",
@@ -171,6 +170,7 @@ const FilePreviewer = () => {
         },
         agentId,
         draft.file,
+        sendAsContact,
       );
 
       setMediaLoad(record.id!, {

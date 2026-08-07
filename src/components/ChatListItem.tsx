@@ -7,6 +7,9 @@ import {
   type InstagramContactAddressExtra,
   type MessageRow,
   type OutgoingStatus,
+  isInternal,
+  isIncoming,
+  isOutgoing,
 } from "@/supabase/client";
 import ServiceIcon from "./ServiceIcon";
 import ItemActions from "./ItemActions";
@@ -17,7 +20,7 @@ import localizedFormat from "dayjs/plugin/localizedFormat";
 dayjs.extend(localizedFormat);
 import { TickContext } from "@/contexts/useTick";
 import { useTranslation } from "@/hooks/useTranslation";
-import { AtSign, Pause } from "lucide-react";
+import { AtSign } from "lucide-react";
 import { mediaCategory } from "./Message/media";
 
 import { useCurrentAgent, useCurrentAgents } from "@/queries/useAgents";
@@ -31,10 +34,7 @@ function mediaPreview(t: (content: string) => ReactNode, message?: MessageRow) {
   let mediaIconClass = "mr-[3px]";
   let mediaPreviewContent: ReactNode = "";
 
-  if (
-    !message ||
-    !(message.direction === "incoming" || message.direction === "outgoing")
-  ) {
+  if (!message || isInternal(message)) {
     return { mediaIcon, mediaPreviewContent };
   }
 
@@ -165,18 +165,20 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
     state.chat.conversations.get(itemId),
   );
 
+  const isGroup = conversation?.type === "group";
+
   const { data: contact } = useContactByAddress(
-    conversation?.contact_address,
+    isGroup ? undefined : conversation?.address,
     conversation?.service,
   );
   const { data: contactAddress } = useContactAddress(
-    conversation?.contact_address,
+    isGroup ? undefined : conversation?.address,
     conversation?.service,
   );
 
   const { data: agent } = useCurrentAgent();
   const { data: agents } = useCurrentAgents();
-  const isAdmin = ["admin", "owner"].includes(agent?.extra?.role || "");
+  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
 
   const messages: MessageRow[] | undefined = Array.from(
     useBoundStore((state) => state.chat.messages.get(itemId || ""))?.values() ||
@@ -184,29 +186,30 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
   );
 
   // If the role is not admin, then do not show internal messages.
-  const mostRecent = messages?.find(
-    (m) => isAdmin || m.direction !== "internal",
-  );
+  const mostRecent = messages?.find((m) => isAdmin || !isInternal(m));
 
   // Group previews are prefixed with the sender name, as in WhatsApp Web.
   const previewSenderAddress =
-    conversation?.group_address &&
-    mostRecent?.direction === "incoming" &&
-    mostRecent.contact_address
-      ? mostRecent.contact_address
+    isGroup && mostRecent && isIncoming(mostRecent) && mostRecent.sender_address
+      ? mostRecent.sender_address
       : undefined;
   const { data: previewSender } = useContactByAddress(
     previewSenderAddress,
     conversation?.service,
   );
 
-  const draft: Draft | null | undefined = conversation?.extra?.draft;
+  const membershipExtra = useBoundStore((state) =>
+    state.chat.membershipExtras.get(itemId),
+  );
+  const draft: Draft | null | undefined = membershipExtra?.draft;
 
   const preview =
     +new Date(mostRecent?.timestamp || 0) >= +new Date(draft?.timestamp || 0)
       ? mostRecent
       : ({
-          direction: "incoming", // direction is not important, except that incoming does not display status icons, which is correct for drafts
+          // A draft is authored by nobody yet; sender_address set keeps it
+          // rendering as incoming, which correctly shows no status icons.
+          sender_address: "draft",
           content: {
             version: "1",
             type: "text",
@@ -215,7 +218,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
           },
           timestamp: draft!.timestamp,
           status: {},
-        } as MessageRow);
+        } as unknown as MessageRow);
 
   const unread = (() => {
     let count = 0;
@@ -228,24 +231,24 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
 
     // Messages are sorted by most recent first.
     for (const msg of messages) {
-      if (msg.direction === "incoming" && !countBreak) {
+      if (isIncoming(msg) && !countBreak) {
         count += 1;
       } else if (
-        msg.direction === "internal" &&
+        isInternal(msg) &&
         // @ts-expect-error notification is deprecated (TODO: remove)
         msg.content.kind === "notification"
       ) {
         notification = true;
       } else if (
-        msg.direction === "outgoing" &&
+        isOutgoing(msg) &&
         agents
-          ?.filter((a) => !a.ai)
+          ?.filter((a) => a.user_id !== null)
           .map((a) => a.id)
           .includes(msg.agent_id || "")
       ) {
         // Only humans can mark notifications as responded.
         break;
-      } else if (msg.direction === "outgoing") {
+      } else if (isOutgoing(msg)) {
         // Any agent can mark incoming messages as responded.
         countBreak = true;
       }
@@ -256,11 +259,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
 
   const tick = useContext(TickContext); // one-minute ticks
 
-  const isPinned = conversation?.extra?.pinned;
-
-  const isPaused =
-    +new Date(conversation?.extra?.paused || 0) >
-    +new Date() - 12 * 60 * 60 * 1000; // Less than 12 hours ago.
+  const isPinned = membershipExtra?.pinned;
 
   const igExtra =
     conversation?.service === "instagram"
@@ -275,15 +274,15 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
     contactAddress?.extra?.name ||
     (igExtra?.username ? `@${igExtra.username}` : undefined);
 
-  // When there is no name, show the (formatted) contact address instead of "?".
+  // When there is no name, show the (formatted) peer address instead of "?".
   // WhatsApp addresses are phone numbers; Instagram addresses need no
-  // formatting. Groups (whatsapp-web) have no contact_address — the name
-  // carries the group subject, falling back to the opaque group JID.
-  const address = conversation?.contact_address;
+  // formatting. For groups the name carries the group subject, falling back
+  // to the opaque group address.
+  const address = conversation?.address;
   const displayName =
     name ||
-    (conversation?.group_address
-      ? conversation.group_address
+    (isGroup
+      ? address
       : address
         ? conversation?.service === "whatsapp" ||
           conversation?.service === "whatsapp-web"
@@ -368,8 +367,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
             {/* Lower row */}
             <div className="flex justify-between mt-[2px] items-start">
               <div className="min-w-0 flex items-start text-muted-foreground">
-                {preview?.direction === "outgoing" &&
-                  statusIcon(preview.status)}
+                {preview && isOutgoing(preview) && statusIcon(preview.status)}
                 {preview?.agent_id && preview.agent_id !== agent?.id && (
                   <div className="text-primary text-[14px] mr-1 shrink-0">
                     {agents?.find((a) => a.id === preview.agent_id)?.name ||
@@ -410,10 +408,6 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
               </div>
 
               <div className="flex flex-row items-center">
-                {/* Pause - AI assistant paused */}
-                {isPaused && (
-                  <Pause className="h-[19px] w-[19px] ml-[6px] fill-muted-foreground stroke-0" />
-                )}
                 {/* Pin - For now just conversations can be fixed */}
                 {isPinned && (
                   <svg className="h-[18px] w-[12px] ml-[6px] text-muted-foreground">

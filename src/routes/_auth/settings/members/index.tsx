@@ -1,7 +1,12 @@
 import SectionBody from "@/components/SectionBody";
 import SectionHeader from "@/components/SectionHeader";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useCurrentAgents, useCurrentAgent } from "@/queries/useAgents";
+import {
+  useCurrentAgents,
+  useCurrentAgent,
+  useOrgInvitations,
+  useRevokeInvitation,
+} from "@/queries/useAgents";
 import SectionItem from "@/components/SectionItem";
 import Avatar from "@/components/Avatar";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -15,8 +20,10 @@ function ListMembers() {
   const { translate: t } = useTranslation();
   const navigate = useNavigate();
   const { data: agents } = useCurrentAgents();
+  const { data: invitations } = useOrgInvitations();
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const revokeInvitation = useRevokeInvitation();
+  const isOwner = currentAgent?.role === "owner";
 
   const roles: Record<string, string> = {
     owner: t("Propietario"),
@@ -46,17 +53,16 @@ function ListMembers() {
           disabledReason={t("Requiere permisos de propietario")}
         />
         {agents
-          ?.filter((agent) => !agent.ai)
+          ?.filter((agent) => agent.user_id !== null)
           .map((agent) => {
-            const role = roles[agent.extra?.role || "member"];
-            const pending = agent.extra?.invitation?.status === "pending";
+            const role = roles[agent.role || "member"];
             const isMe = agent.id === currentAgent?.id;
 
             return (
               <SectionItem
                 key={agent.id}
                 title={agent.name + (isMe ? ` (${t("tú")})` : "")}
-                description={role + (pending ? ` (${t("pendiente")})` : "")}
+                description={role}
                 aside={
                   <Avatar
                     src={agent.picture}
@@ -74,6 +80,27 @@ function ListMembers() {
               />
             );
           })}
+        {invitations?.map((invitation) => (
+          <SectionItem
+            key={invitation.id}
+            title={invitation.email}
+            description={
+              roles[invitation.role || "member"] + ` (${t("pendiente")})`
+            }
+            aside={
+              <Avatar
+                fallback={invitation.email.substring(0, 2).toUpperCase()}
+                size={40}
+                className="bg-muted text-muted-foreground"
+              />
+            }
+            onClick={() => {
+              if (isOwner) revokeInvitation.mutate(invitation.id);
+            }}
+            disabled={!isOwner}
+            disabledReason={t("Requiere permisos de propietario")}
+          />
+        ))}
       </SectionBody>
     </>
   );

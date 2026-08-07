@@ -35,7 +35,7 @@ function AppLayout() {
   const { translate: t } = useTranslation();
   const activeOrgId = useBoundStore((state) => state.ui.activeOrgId);
   const { data: agents } = useCurrentAgents();
-  const hasAiAgents = agents?.some((a) => a.ai);
+  const hasAiAgents = agents?.some((a) => a.user_id === null);
   const activeConvId = useBoundStore((state) => state.ui.activeConvId);
   const setActiveConv = useBoundStore((state) => state.ui.setActiveConv);
   const location = useLocation();

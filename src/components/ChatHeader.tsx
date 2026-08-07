@@ -18,18 +18,18 @@ export default function Header() {
   );
 
   const { data: contact } = useContactByAddress(
-    conversation?.contact_address,
+    conversation?.address,
     conversation?.service,
   );
   const { data: contactAddress } = useContactAddress(
-    conversation?.contact_address,
+    conversation?.address,
     conversation?.service,
   );
 
   const service = conversation?.service;
-  // Group conversations (whatsapp-web) have group_address set and no
-  // contact_address; the conversation name carries the group subject.
-  const isGroup = !!conversation?.group_address;
+  // Groups carry the subject in the conversation name; the address is the
+  // opaque group id.
+  const isGroup = conversation?.type === "group";
 
   const igExtra =
     service === "instagram"
@@ -44,7 +44,7 @@ export default function Header() {
     contactAddress?.extra?.name ||
     (igExtra?.username ? `@${igExtra.username}` : undefined);
 
-  const address = conversation?.contact_address;
+  const address = conversation?.address;
 
   // When there is no name, show the (formatted) contact address instead of "?".
   // WhatsApp addresses are phone numbers; Instagram addresses need no
@@ -52,7 +52,7 @@ export default function Header() {
   const displayName =
     convName ||
     (isGroup
-      ? conversation?.group_address
+      ? conversation?.address
       : address
         ? service === "whatsapp" || service === "whatsapp-web"
           ? formatPhoneNumber(address)

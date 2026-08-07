@@ -19,7 +19,7 @@ function AddApiKey() {
   const navigate = useNavigate();
   const createApiKey = useCreateApiKey();
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
 
   const {
     register,

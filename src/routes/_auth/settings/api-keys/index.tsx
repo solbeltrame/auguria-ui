@@ -16,7 +16,7 @@ function ListApiKeys() {
   const navigate = useNavigate();
   const { data: apiKeys } = useApiKeys();
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
 
   const roles: Record<string, string> = {
     owner: t("Propietario"),

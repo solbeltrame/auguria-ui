@@ -6,7 +6,7 @@ import localizedFormat from "dayjs/plugin/localizedFormat";
 dayjs.extend(localizedFormat);
 import useBoundStore from "@/stores/useBoundStore";
 import Message from "./Message/Message";
-import { type MessageRow } from "@/supabase/client";
+import { type MessageRow, isInternal, messageDirection } from "@/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useCurrentOrganization } from "@/queries/useOrganizations";
 import { useCurrentAgent } from "@/queries/useAgents";
@@ -57,7 +57,7 @@ export default function Chat() {
 
   const { data: agent } = useCurrentAgent();
   const activeAgentId = agent?.id;
-  const isAdmin = ["admin", "owner"].includes(agent?.extra?.role || "");
+  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
 
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -137,15 +137,15 @@ export default function Chat() {
         env.last = true;
       } else if (
         prevMsg.message.agent_id === env.message.agent_id &&
-        prevMsg.message.direction === env.message.direction &&
-        prevMsg.message.contact_address === env.message.contact_address
+        messageDirection(prevMsg.message) === messageDirection(env.message) &&
+        prevMsg.message.sender_address === env.message.sender_address
       ) {
         prevMsg.last = false;
         env.last = true;
       } else if (
         prevMsg.message.agent_id !== env.message.agent_id ||
-        prevMsg.message.direction !== env.message.direction ||
-        prevMsg.message.contact_address !== env.message.contact_address
+        messageDirection(prevMsg.message) !== messageDirection(env.message) ||
+        prevMsg.message.sender_address !== env.message.sender_address
       ) {
         prevMsg.last = true;
         env.first = true;
@@ -249,7 +249,7 @@ export default function Chat() {
         if (isAdmin) return true;
 
         // Hide internal messages for non-admin users
-        if (m.direction === "internal") return false;
+        if (isInternal(m)) return false;
 
         // @ts-expect-error draft is deprecated
         if (m.kind === "draft" && idx !== 0) return false;

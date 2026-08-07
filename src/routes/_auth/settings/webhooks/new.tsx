@@ -18,7 +18,7 @@ function AddWebhook() {
   const navigate = useNavigate();
   const createWebhook = useCreateWebhook();
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.extra?.role || "");
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
 
   const {
     register,

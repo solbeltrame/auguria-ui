@@ -21,7 +21,7 @@ export const IG_INAPP_REDIRECT_PATH = "/oauth/instagram";
 function InstagramNew() {
   const { translate: t } = useTranslation();
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 

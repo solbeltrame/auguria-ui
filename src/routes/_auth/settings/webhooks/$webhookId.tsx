@@ -24,7 +24,7 @@ function EditWebhook() {
   const { webhookId } = Route.useParams();
   const { data: webhook } = useWebhook(webhookId);
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.extra?.role || "");
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
   const updateWebhook = useUpdateWebhook();
   const deleteWebhook = useDeleteWebhook();
 

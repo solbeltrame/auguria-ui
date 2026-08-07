@@ -28,7 +28,7 @@ function MediaPreprocessingSettings() {
   const { data: agent } = useCurrentAgent();
   const updateOrg = useUpdateCurrentOrganization();
 
-  const isOwner = agent?.extra?.role === "owner";
+  const isOwner = agent?.role === "owner";
 
   const normalizedOrg = useMemo(() => {
     if (!org) return undefined;

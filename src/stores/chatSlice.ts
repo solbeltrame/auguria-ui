@@ -1,4 +1,8 @@
-import type { ConversationRow, MessageRow } from "@/supabase/client";
+import type {
+  ConversationAgentExtra,
+  ConversationRow,
+  MessageRow,
+} from "@/supabase/client";
 import type { AppState } from "./useBoundStore";
 import type { StateCreator } from "zustand";
 // @ts-expect-error no type declarations for the core-js-pure submodule
@@ -39,6 +43,10 @@ type MediaLoad = {
 
 export type ChatState = {
   conversations: Map<string, ConversationRow>;
+  // The caller's own agent id in the active org, and their per-conversation
+  // state (conversations_agents.extra rows): archived/pinned/draft.
+  ownAgentId: string | null;
+  membershipExtras: Map<string, ConversationAgentExtra>;
   messages: Map<string, Map<string, MessageRow>>; // TODO: replace the nested maps with a data structure capable of prefix search (a Trie) - cabra 2024/07/26
   textDrafts: Map<string, string>;
   fileDrafts: Map<string, FileDraft[]>;
@@ -47,6 +55,14 @@ export type ChatState = {
 
 export type ChatActions = {
   pushConversations: (convs: ConversationRow[]) => void;
+  setOwnAgentId: (agentId: string | null) => void;
+  setMembershipExtra: (
+    convId: string,
+    extra: Partial<ConversationAgentExtra>,
+  ) => void;
+  pushMembershipExtras: (
+    rows: { conversation_id: string; extra: ConversationAgentExtra | null }[],
+  ) => void;
   pushMessages: (msgs: MessageRow[]) => void;
   setMediaLoad: (messageId: string, mediaLoad: MediaLoad) => void;
   setConversationTextDraft: (convId: string, textDraft: string) => void;
@@ -71,10 +87,36 @@ export const createChatSlice: StateCreator<Partial<AppState>> = (
   ) => void,
 ) => ({
   conversations: new Map(),
+  ownAgentId: null,
+  membershipExtras: new Map(),
   messages: new Map(),
   textDrafts: new Map(),
   fileDrafts: new Map(),
   mediaLoads: new Map(),
+  setOwnAgentId: (agentId: string | null) =>
+    set((state) => ({ chat: { ...state.chat, ownAgentId: agentId } })),
+  setMembershipExtra: (
+    convId: string,
+    extra: Partial<ConversationAgentExtra>,
+  ) =>
+    set((state) => {
+      const membershipExtras = new Map(state.chat.membershipExtras);
+      membershipExtras.set(convId, {
+        ...membershipExtras.get(convId),
+        ...extra,
+      });
+      return { chat: { ...state.chat, membershipExtras } };
+    }),
+  pushMembershipExtras: (
+    rows: { conversation_id: string; extra: ConversationAgentExtra | null }[],
+  ) =>
+    set((state) => {
+      const membershipExtras = new Map(state.chat.membershipExtras);
+      for (const row of rows) {
+        membershipExtras.set(row.conversation_id, row.extra || {});
+      }
+      return { chat: { ...state.chat, membershipExtras } };
+    }),
   pushConversations: (convs: ConversationRow[]) =>
     set((state) => {
       const conversations = new Map(state.chat.conversations);

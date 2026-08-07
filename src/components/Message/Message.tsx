@@ -1,8 +1,7 @@
 import {
   type MessageRow,
   type OutgoingStatus,
-  type ToolInfo,
-} from "@/supabase/client";
+  type ToolInfo, type Direction, messageDirection } from "@/supabase/client";
 import AudioMessage from "./AudioMessage";
 import DocumentMessage from "./DocumentMessage";
 import ImageMessage from "./ImageMessage";
@@ -72,7 +71,7 @@ export function Markdown({
   withoutEndingSpace,
 }: {
   content: string;
-  direction: MessageRow["direction"];
+  direction: Direction;
   onInput?: FormEventHandler<HTMLDivElement>;
   withoutEndingSpace?: boolean;
 }) {
@@ -115,7 +114,7 @@ export function TextMessage({
   timestamp?: string;
   status?: OutgoingStatus;
   onInput?: FormEventHandler<HTMLDivElement>;
-  direction: MessageRow["direction"];
+  direction: Direction;
   type?: "markdown" | "json";
   fixedWidth?: boolean;
 }) {
@@ -403,18 +402,19 @@ type UIMessage = {
 export default function Message(props: UIMessage & { message: MessageRow }) {
   const { translate: t } = useTranslation();
 
-  // Group conversations (whatsapp-web): incoming rows carry the actual sender in
-  // contact_address. Resolve a friendly label to attribute each message.
+  // Group conversations: incoming rows carry the actual sender in
+  // sender_address, while conversation_address names the group itself — in a
+  // direct chat both are the peer. Resolve a friendly label to attribute each
+  // message.
   const isGroupIncoming =
-    !!props.message.group_address &&
-    props.message.direction === "incoming" &&
-    !!props.message.contact_address;
+    !!props.message.sender_address &&
+    props.message.sender_address !== props.message.conversation_address;
   const { data: senderContact } = useContactByAddress(
-    isGroupIncoming ? props.message.contact_address : undefined,
+    isGroupIncoming ? props.message.sender_address : undefined,
     props.message.service,
   );
   const senderName = isGroupIncoming
-    ? senderContact?.name || formatPhoneNumber(props.message.contact_address!)
+    ? senderContact?.name || formatPhoneNumber(props.message.sender_address!)
     : undefined;
 
   let content;
@@ -448,10 +448,10 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         header={headerText}
         body={props.message.content.text}
         type="markdown"
-        direction={props.message.direction}
+        direction={messageDirection(props.message)}
         timestamp={props.message.timestamp}
         status={
-          props.message.direction === "outgoing"
+          messageDirection(props.message) === "outgoing"
             ? props.message.status
             : undefined
         }
@@ -468,10 +468,10 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         header={headerText}
         body={props.message.content.text}
         type="markdown"
-        direction={props.message.direction}
+        direction={messageDirection(props.message)}
         timestamp={props.message.timestamp}
         status={
-          props.message.direction === "outgoing"
+          messageDirection(props.message) === "outgoing"
             ? props.message.status
             : undefined
         }
@@ -498,10 +498,10 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
             : "")
         }
         type="markdown"
-        direction={props.message.direction}
+        direction={messageDirection(props.message)}
         timestamp={props.message.timestamp}
         status={
-          props.message.direction === "outgoing"
+          messageDirection(props.message) === "outgoing"
             ? props.message.status
             : undefined
         }
@@ -515,10 +515,10 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         header={headerText}
         body={props.message.content.data}
         type="json"
-        direction={props.message.direction}
+        direction={messageDirection(props.message)}
         timestamp={props.message.timestamp}
         status={
-          props.message.direction === "outgoing"
+          messageDirection(props.message) === "outgoing"
             ? props.message.status
             : undefined
         }
@@ -557,18 +557,18 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
 
   return (
     <>
-      {props.message.direction === "incoming" && (
+      {messageDirection(props.message) === "incoming" && (
         <InMessage {...{ ...props, text, fixedWidth, senderName }}>
           {content}
         </InMessage>
       )}
-      {(props.message.direction === "outgoing" ||
-        props.message.direction === "internal") && (
+      {(messageDirection(props.message) === "outgoing" ||
+        messageDirection(props.message) === "internal") && (
         <OutMessage
           {...{
             ...props,
             text,
-            internal: props.message.direction === "internal",
+            internal: messageDirection(props.message) === "internal",
             fixedWidth,
           }}
         >

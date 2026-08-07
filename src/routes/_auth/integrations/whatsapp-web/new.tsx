@@ -24,7 +24,7 @@ function WhatsAppWebNew() {
   const { translate: t } = useTranslation();
   const navigate = useNavigate();
   const { data: agent } = useCurrentAgent();
-  const isOwner = agent?.extra?.role === "owner";
+  const isOwner = agent?.role === "owner";
 
   const [method, setMethod] = useState<Method>("qr");
   const [phone, setPhone] = useState("");

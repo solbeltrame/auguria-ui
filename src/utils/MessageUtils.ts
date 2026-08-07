@@ -11,10 +11,12 @@ import useBoundStore from "@/stores/useBoundStore";
 
 export function newMessage(
   conv: ConversationRow,
-  direction: "incoming" | "outgoing" | "internal",
   content: OutgoingMessage | IncomingMessage | InternalMessage,
   agentId?: string,
   file?: File,
+  // "Send as contact": author the row in contact space, so it reads as
+  // incoming (sender_address is what direction derives from now).
+  asContact = false,
 ): MessageInsert {
   // If a file is provided, update the FilePart with file metadata
   if (file && content.type === "file") {
@@ -29,21 +31,24 @@ export function newMessage(
     };
   }
 
-  // Build the insert object based on direction
   // TypeScript needs help with the union types, so we use type assertions
   return {
     id: crypto.randomUUID(),
     organization_id: conv.organization_id,
-    conversation_id: conv.id,
+    // A conversation that never hit the DB (no updated_at) cannot be named on
+    // an external service — its row is minted by this very message's insert
+    // trigger from the addressing below. `local` conversations are inserted
+    // directly, so their id is valid.
+    conversation_id:
+      conv.updated_at || conv.service === "local" ? conv.id : undefined,
     service: conv.service,
     organization_address: conv.organization_address,
-    contact_address: conv.contact_address,
-    // Group conversations (whatsapp-web) route outgoing messages by the group
-    // JID; contact_address stays null (it carries the sender on incoming rows).
-    group_address: conv.group_address,
-    direction,
+    // The peer the conversation is with — groups included; the sender of an
+    // outgoing row is us, so sender_address stays null.
+    conversation_address: conv.address,
+    sender_address: asContact ? conv.address : null,
     content,
-    agent_id: agentId || null,
+    agent_id: asContact ? null : agentId || null,
   } as MessageInsert;
 }
 

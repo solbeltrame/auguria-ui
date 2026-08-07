@@ -19,6 +19,9 @@ export default function ItemActions({
   const conversation = useBoundStore((state) =>
     state.chat.conversations.get(itemId || ""),
   );
+  const membershipExtra = useBoundStore((state) =>
+    state.chat.membershipExtras.get(itemId || ""),
+  );
   const mostRecentMsg: MessageRow | undefined = useBoundStore(
     (state) =>
       state.chat.messages
@@ -33,29 +36,17 @@ export default function ItemActions({
     return children;
   }
 
-  const isPinned = conversation.extra?.pinned;
-
-  const isPaused =
-    +new Date(conversation.extra?.paused || 0) >
-    +new Date() - 12 * 60 * 60 * 1000; // Less than 12 hours ago.
+  const isPinned = membershipExtra?.pinned;
 
   const items: MenuProps["items"] = [
     {
-      label: isPaused ? t("Reanudar asistente") : t("Pausar asistente"),
-      key: "0",
-      onClick: () =>
-        updateConvExtra(conversation, {
-          paused: isPaused ? null : new Date().toISOString(),
-        }),
-    },
-    {
-      label: isArchived(conversation, mostRecentMsg)
+      label: isArchived(membershipExtra, mostRecentMsg)
         ? t("Desarchivar chat")
         : t("Archivar chat"),
       key: "1",
       onClick: () =>
         updateConvExtra(conversation, {
-          archived: isArchived(conversation, mostRecentMsg)
+          archived: isArchived(membershipExtra, mostRecentMsg)
             ? null
             : new Date().toISOString(),
         }),
@@ -68,11 +59,6 @@ export default function ItemActions({
           pinned: isPinned ? null : new Date().toISOString(),
         }),
     },
-    /*{
-      label: t("Marcar como no leído"),
-      key: "2",
-      disabled: true,
-    },*/
   ];
 
   return (

@@ -24,7 +24,7 @@ function InstagramAddressDetail() {
 
   if (!integration) return;
 
-  const isOwner = agent?.extra?.role === "owner";
+  const isOwner = agent?.role === "owner";
   const extra = integration.extra as
     | InstagramOrganizationAddressExtra
     | undefined;

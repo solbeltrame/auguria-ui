@@ -38,7 +38,7 @@ function AgentDetail() {
   const { agentId } = Route.useParams();
   const { data: agent } = useAgent<AIAgentRow>(agentId);
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.extra?.role || "");
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
   const deleteAgent = useDeleteAgent();
   const updateAgent = useUpdateAgent();
   const activeOrgId = useBoundStore((state) => state.ui.activeOrgId);
@@ -78,13 +78,16 @@ function AgentDetail() {
   const model = useWatch({ control, name: "extra.model" });
 
   const handleChat = () => {
-    if (!activeOrgId || !localAddress) return;
+    if (!activeOrgId || !localAddress || !currentAgent) return;
 
+    // A local DM with the AI agent: a direct is DEFINED by its roster, so the
+    // address IS the participant list (sorted agent ids) — no per-conversation
+    // agent override exists any more.
     const convId = startConversation({
       organization_id: activeOrgId,
       organization_address: localAddress.address,
       service: "local",
-      extra: { default_agent_id: agentId },
+      address: [currentAgent.id, agentId].sort().join(":"),
       name: agent?.name,
     });
 
@@ -268,6 +271,28 @@ function AgentDetail() {
                   </ul>
                 </div>
               )}
+
+              <label>
+                <div className="label">{t("Demora de respuesta (segundos)")}</div>
+                <input
+                  type="number"
+                  className="text"
+                  min={0}
+                  placeholder="3"
+                  {...register("extra.response_delay_seconds", {
+                    valueAsNumber: true,
+                  })}
+                />
+              </label>
+
+              <TextAreaField
+                control={control}
+                name="extra.welcome_message"
+                label={t("Mensaje de bienvenida")}
+                placeholder={t(
+                  "Hola! Soy un agente virtual. ¿En qué puedo ayudarte?",
+                )}
+              />
 
               <label>
                 <div className="label">{t("Mensajes máximos")}</div>

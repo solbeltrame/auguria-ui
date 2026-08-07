@@ -4,7 +4,7 @@ import StatusIcon from "./StatusIcon";
 import { useMedia } from "@/hooks/useMedia";
 import { fileSize } from "./DocumentMessage";
 import dayjs from "dayjs";
-import { type MessageRow, type OutgoingStatus } from "@/supabase/client";
+import { type MessageRow, type OutgoingStatus, messageDirection } from "@/supabase/client";
 import { Markdown } from "./Message";
 import { mediaCategory } from "./media";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -15,7 +15,7 @@ const MAX_PORTRAIT_HEIGHT = (PORTRAIT_WIDTH * 4) / 3;
 const MAX_LANDSCAPE_HEIGHT = (LANDSCAPE_WIDTH * 3) / 4;
 
 export default function VideoMessage(message: MessageRow) {
-  if (!(message.direction === "incoming" || message.direction === "outgoing")) {
+  if (!(messageDirection(message) === "incoming" || messageDirection(message) === "outgoing")) {
     throw new Error(`Message with id ${message.id} is not a BaseMessage.`);
   }
 
@@ -165,7 +165,7 @@ export default function VideoMessage(message: MessageRow) {
 
         {/* Load button */}
         {(load.status === "pending" || load.status === "error") &&
-          !isNaN(media.size) && (
+          !isNaN(media.size ?? NaN) && (
             <div className="z-[1] rounded-full h-[44px] pl-[13px] pr-[18px] flex items-center text-white bg-[rgba(11,20,26,.35)] text-[13px]">
               <svg
                 className={
@@ -176,12 +176,12 @@ export default function VideoMessage(message: MessageRow) {
                 <use href="/icons.svg#image-download" />
               </svg>
 
-              <div className="ml-[5px]">{fileSize(media.size)}</div>
+              <div className="ml-[5px]">{fileSize(media.size ?? NaN)}</div>
             </div>
           )}
         {/* Alternative load button for when file size is missing, just in case */}
         {(load.status === "pending" || load.status === "error") &&
-          isNaN(media.size) && (
+          isNaN(media.size ?? NaN) && (
             <div className="z-[1] rounded-full flex items-center justify-center text-white bg-[rgba(11,20,26,.35)] w-[44px] h-[44px]">
               <svg
                 className={
@@ -208,7 +208,7 @@ export default function VideoMessage(message: MessageRow) {
         <div className="pl-[6px] pt-[6px] pb-[5px] pr-[4px]" style={{ width }}>
           <Markdown
             content={content.text || ""}
-            direction={message.direction}
+            direction={messageDirection(message)}
           />
         </div>
       )}
@@ -235,7 +235,7 @@ export default function VideoMessage(message: MessageRow) {
                     ? description.text || ""
                     : "";
                 })()}
-                direction={message.direction}
+                direction={messageDirection(message)}
               />
             )}
             <div
@@ -259,7 +259,7 @@ export default function VideoMessage(message: MessageRow) {
         }
       >
         {dayjs(message.timestamp).format("HH:mm")}
-        {message.direction === "outgoing" && (
+        {messageDirection(message) === "outgoing" && (
           <StatusIcon {...(message.status as OutgoingStatus)} />
         )}
       </div>

@@ -7,9 +7,7 @@ import SectionItem from "@/components/SectionItem";
 import Spinner from "@/components/Spinner";
 import { Bell } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useInvitations, useUpdateAgent } from "@/queries/useAgents";
-import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/queries/queryKeys";
+import { useInvitations, useAnswerInvitation } from "@/queries/useAgents";
 
 export const Route = createFileRoute("/_auth/conversations/")({
   component: Conversations,
@@ -18,8 +16,7 @@ export const Route = createFileRoute("/_auth/conversations/")({
 function Conversations() {
   const { translate: t } = useTranslation();
   const { data: invitations } = useInvitations();
-  const queryClient = useQueryClient();
-  const updateAgent = useUpdateAgent();
+  const answerInvitation = useAnswerInvitation();
 
   const roles: Record<string, string> = {
     owner: t("Propietario"),
@@ -28,29 +25,10 @@ function Conversations() {
   };
 
   const handleInvitationAction = (
-    agentId: string,
-    status: "accepted" | "rejected",
+    invitationId: string,
+    answer: "accepted" | "rejected",
   ) => {
-    updateAgent.mutate(
-      {
-        id: agentId,
-        extra: {
-          invitation: {
-            status,
-          },
-        },
-      },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.agents.invitations(),
-          });
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.organizations.all(),
-          });
-        },
-      },
-    );
+    answerInvitation.mutate({ invitationId, answer });
   };
 
   return (
@@ -68,11 +46,10 @@ function Conversations() {
                 description={
                   <div className="flex flex-col gap-[6px] w-full">
                     <p>
-                      {invitation.extra!.invitation!.organization_name} (
-                      {roles[invitation.extra!.role || "member"]})
+                      {invitation.email} ({roles[invitation.role || "member"]})
                     </p>
                     <div className="flex gap-[16px] justify-end">
-                      {updateAgent.isPending ? (
+                      {answerInvitation.isPending ? (
                         <Spinner size={16} />
                       ) : (
                         <>

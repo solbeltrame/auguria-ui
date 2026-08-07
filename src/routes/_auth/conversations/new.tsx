@@ -111,7 +111,7 @@ function NewChat() {
                 const convId = startConversation({
                   organization_id: activeOrgId,
                   organization_address: whatsappAddresses[0].address,
-                  contact_address: sanitizePhoneNumber(phoneNumber),
+                  address: sanitizePhoneNumber(phoneNumber),
                   service: "whatsapp",
                   name: formatPhoneNumber(sanitizePhoneNumber(phoneNumber)),
                 });

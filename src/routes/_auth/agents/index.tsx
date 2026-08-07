@@ -17,7 +17,7 @@ function ListAgents() {
   const navigate = useNavigate();
   const { data: agents } = useCurrentAgents();
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.extra?.role || "");
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
 
   const modeLabels: Record<string, string | JSX.Element> = {
     active: <span className="text-primary">{t("Activo")}</span>,
@@ -47,7 +47,7 @@ function ListAgents() {
           disabledReason={t("Requiere permisos de administrador")}
         />
         {agents
-          ?.filter((a) => a.ai)
+          ?.filter((a) => a.user_id === null)
           .map((agent) => (
             <SectionItem
               key={agent.id}

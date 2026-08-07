@@ -1,8 +1,9 @@
 //===================================
 // UI-bespoke typed Database (kept, NOT mirrored from the API's database_types):
-// strict `ai`-discriminated agent rows, npm `type-fest`, `organization_id?` on
-// message Insert, and the full Row/Insert/Update + ContactWithAddresses* + Role
-// alias set the UI relies on.
+// strict user_id-discriminated agent rows (an AI agent is one with no user_id),
+// npm `type-fest`, optional organization_id/conversation_id on message Insert,
+// and the full Row/Insert/Update + ContactWithAddresses* + Role alias set the
+// UI relies on.
 //===================================
 
 import type { Database as DatabaseGenerated, Json, Tables } from "../db_types";
@@ -18,11 +19,10 @@ import type {
   ContactAddressExtra,
   ContactExtra,
   ConversationExtra,
-  HumanAgentExtra,
   OrganizationAddressExtra,
   OrganizationExtra,
 } from "./extra_types";
-import type { HumanAgentExtraInsert, HumanAgentExtraUpdate } from "./ui_types";
+import type { ConversationAgentExtra } from "./ui_types";
 
 export type { Json, Tables };
 
@@ -41,37 +41,35 @@ type AgentInsertGenerated =
 type AgentUpdateGenerated =
   DatabaseGenerated["public"]["Tables"]["agents"]["Update"];
 
-export type HumanAgentRow = Omit<AgentRowGenerated, "ai" | "extra"> & {
-  ai: false;
-  extra: HumanAgentExtra | null;
+// A human agent is a membership (user_id set); its access-control role is the
+// `role` column and it has no defined `extra` (invitations are their own
+// table). An AI agent is nobody's membership (user_id null).
+export type HumanAgentRow = Omit<AgentRowGenerated, "user_id" | "extra"> & {
+  user_id: string;
+  extra: null;
 };
 
-export type AIAgentRow = Omit<AgentRowGenerated, "ai" | "extra"> & {
-  ai: true;
+export type AIAgentRow = Omit<AgentRowGenerated, "user_id" | "extra"> & {
+  user_id: null;
   extra: AIAgentExtra | null;
 };
 
 type AgentRowStrict = HumanAgentRow | AIAgentRow;
 
-export type HumanAgentInsert = Omit<AgentInsertGenerated, "ai" | "extra"> & {
-  ai: false;
-  extra?: HumanAgentExtraInsert | null;
-};
-
-export type AIAgentInsert = Omit<AgentInsertGenerated, "ai" | "extra"> & {
-  ai: true;
+// Only AI agents are insertable: inserting an agent with a user_id is refused
+// by the API — people join by accepting an invitation.
+export type AIAgentInsert = Omit<AgentInsertGenerated, "user_id" | "extra"> & {
+  user_id?: null;
   extra?: AIAgentExtra | null;
 };
 
-type AgentInsertStrict = HumanAgentInsert | AIAgentInsert;
+type AgentInsertStrict = AIAgentInsert;
 
-export type HumanAgentUpdate = Omit<AgentUpdateGenerated, "ai" | "extra"> & {
-  ai?: false;
-  extra?: HumanAgentExtraUpdate | null;
+export type HumanAgentUpdate = Omit<AgentUpdateGenerated, "extra"> & {
+  extra?: null;
 };
 
-export type AIAgentUpdate = Omit<AgentUpdateGenerated, "ai" | "extra"> & {
-  ai?: true;
+export type AIAgentUpdate = Omit<AgentUpdateGenerated, "extra"> & {
   extra?: AIAgentExtra | null;
 };
 
@@ -94,48 +92,30 @@ export type Database = MergeDeep<
         };
         conversations: {
           Row: { extra: ConversationExtra | null };
-          Insert: { extra?: ConversationExtra | null };
+          // address is minted by before_insert for local conversations (the
+          // roster, or the row id for group/channel), so the client may omit it.
+          Insert: { address?: string; extra?: ConversationExtra | null };
           Update: { extra?: ConversationExtra | null };
         };
+        conversations_agents: {
+          Row: { extra: ConversationAgentExtra | null };
+          Insert: { extra?: ConversationAgentExtra | null };
+          Update: { extra?: ConversationAgentExtra | null };
+        };
+        // `direction` is gone: authorship is the addressing — incoming =
+        // sender_address set, outgoing = null, record-only = content.internal
+        // (see isIncoming/isOutgoing/isInternal in utils/MessageUtils).
         messages: {
-          Row:
-            | {
-                direction: "incoming";
-                content: IncomingMessage;
-                status: IncomingStatus;
-              }
-            | {
-                direction: "internal";
-                content: InternalMessage;
-                status: IncomingStatus;
-              }
-            | {
-                direction: "outgoing";
-                content: OutgoingMessage;
-                status: OutgoingStatus;
-              };
-          Insert:
-            | {
-                organization_id?: string;
-                conversation_id?: string;
-                direction: "incoming";
-                content: IncomingMessage;
-                status?: IncomingStatus;
-              }
-            | {
-                organization_id?: string;
-                conversation_id?: string;
-                direction: "internal";
-                content: InternalMessage;
-                status?: IncomingStatus;
-              }
-            | {
-                organization_id?: string;
-                conversation_id?: string;
-                direction: "outgoing";
-                content: OutgoingMessage;
-                status?: OutgoingStatus;
-              };
+          Row: {
+            content: IncomingMessage | OutgoingMessage | InternalMessage;
+            status: IncomingStatus | OutgoingStatus;
+          };
+          Insert: {
+            organization_id?: string;
+            conversation_id?: string;
+            content: IncomingMessage | OutgoingMessage | InternalMessage;
+            status?: IncomingStatus | OutgoingStatus;
+          };
         };
         contacts: {
           Row: { extra: ContactExtra | null };
@@ -169,6 +149,13 @@ export type ConversationInsert =
 export type ConversationUpdate =
   Database["public"]["Tables"]["conversations"]["Update"];
 
+export type ConversationAgentRow =
+  Database["public"]["Tables"]["conversations_agents"]["Row"];
+export type ConversationAgentInsert =
+  Database["public"]["Tables"]["conversations_agents"]["Insert"];
+export type ConversationAgentUpdate =
+  Database["public"]["Tables"]["conversations_agents"]["Update"];
+
 export type OrganizationRow =
   Database["public"]["Tables"]["organizations"]["Row"];
 export type OrganizationInsert =
@@ -201,6 +188,12 @@ export type AgentRow = Database["public"]["Tables"]["agents"]["Row"];
 export type AgentInsert = Database["public"]["Tables"]["agents"]["Insert"];
 export type AgentUpdate = Database["public"]["Tables"]["agents"]["Update"];
 
+export type InvitationRow = Database["public"]["Tables"]["invitations"]["Row"];
+export type InvitationInsert =
+  Database["public"]["Tables"]["invitations"]["Insert"];
+export type InvitationUpdate =
+  Database["public"]["Tables"]["invitations"]["Update"];
+
 export type OrganizationAddressRow =
   Database["public"]["Tables"]["organizations_addresses"]["Row"];
 
@@ -209,3 +202,13 @@ export type ApiKeyInsert = Database["public"]["Tables"]["api_keys"]["Insert"];
 export type ApiKeyUpdate = Database["public"]["Tables"]["api_keys"]["Update"];
 
 export type Role = Database["public"]["Enums"]["role"];
+
+/** An AI agent is one that is nobody's membership. */
+export function isAIAgent(agent: AgentRow): agent is AIAgentRow {
+  return agent.user_id === null;
+}
+
+/** A human agent is a membership: its user_id names the person. */
+export function isHumanAgent(agent: AgentRow): agent is HumanAgentRow {
+  return agent.user_id !== null;
+}

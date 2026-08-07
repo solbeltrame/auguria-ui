@@ -27,7 +27,7 @@ function NewOnboardingToken() {
   const navigate = useNavigate();
   const createToken = useCreateOnboardingToken("whatsapp");
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
 
   const { control, register, handleSubmit } = useForm<FormValues>({
     defaultValues: {

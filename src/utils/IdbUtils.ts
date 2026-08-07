@@ -81,15 +81,10 @@ export const fetchConversationMessages = async (
   activeConvId: string,
   timeWindowStart: dayjs.Dayjs,
 ) => {
-  const [organizationAddress, contactAddress] = activeConvId.split("<>");
-
   const msgsQuery = await supabase
     .from("messages")
     .select()
-    .match({
-      organization_address: organizationAddress,
-      contact_address: contactAddress,
-    })
+    .eq("conversation_id", activeConvId)
     .lt("timestamp", timeWindowStart.toISOString())
     .order("updated_at", { ascending: false })
     .limit(30);

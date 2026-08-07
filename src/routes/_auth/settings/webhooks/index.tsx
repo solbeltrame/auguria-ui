@@ -16,7 +16,7 @@ function ListWebhooks() {
   const navigate = useNavigate();
   const { data: webhooks } = useWebhooks();
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.extra?.role || "");
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
 
   return (
     <>

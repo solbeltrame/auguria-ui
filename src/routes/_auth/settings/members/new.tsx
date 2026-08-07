@@ -1,13 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import SectionHeader from "@/components/SectionHeader";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useCreateAgent, useCurrentAgent } from "@/queries/useAgents";
-import { type HumanAgentInsert } from "@/supabase/client";
+import { useCreateInvitation, useCurrentAgent } from "@/queries/useAgents";
+import { type InvitationInsert } from "@/supabase/client";
 import { useForm } from "react-hook-form";
 import SectionBody from "@/components/SectionBody";
 import SectionFooter from "@/components/SectionFooter";
 import Button from "@/components/Button";
-import { useCurrentOrganization } from "@/queries/useOrganizations";
 import SelectField from "@/components/SelectField";
 
 export const Route = createFileRoute("/_auth/settings/members/new")({
@@ -17,21 +16,18 @@ export const Route = createFileRoute("/_auth/settings/members/new")({
 function AddMember() {
   const { translate: t } = useTranslation();
   const navigate = useNavigate();
-  const createAgent = useCreateAgent();
+  const createInvitation = useCreateInvitation();
   const { data: agent } = useCurrentAgent();
-  const { data: organization } = useCurrentOrganization();
-  const isOwner = agent?.extra?.role === "owner";
+  const isOwner = agent?.role === "owner";
 
   const {
     register,
     handleSubmit,
     control,
     formState: { isValid, isDirty },
-  } = useForm<HumanAgentInsert>({
+  } = useForm<Omit<InvitationInsert, "organization_id">>({
     defaultValues: {
-      extra: {
-        role: "member",
-      },
+      role: "member",
     },
   });
 
@@ -43,23 +39,12 @@ function AddMember() {
         <form
           id="create-member-form"
           onSubmit={handleSubmit((data) =>
-            createAgent.mutate(
+            createInvitation.mutate(
+              { email: data.email, role: data.role },
               {
-                ...data,
-                ai: false,
-                extra: {
-                  role: data.extra!.role!,
-                  invitation: {
-                    organization_name: organization?.name || "",
-                    email: data.extra!.invitation!.email!,
-                    status: "pending",
-                  },
-                },
-              },
-              {
-                onSuccess: (agent) =>
+                onSuccess: () =>
                   navigate({
-                    to: `/settings/members/${agent!.id}`,
+                    to: "/settings/members",
                     hash: (prevHash) => prevHash!,
                   }),
               },
@@ -73,17 +58,8 @@ function AddMember() {
               )}
             </p>
 
-            <label>
-              <div className="label">{t("Nombre")}</div>
-              <input
-                className="text"
-                placeholder={t("Nombre del miembro")}
-                {...register("name", { required: true })}
-              />
-            </label>
-
             <SelectField
-              name="extra.role"
+              name="role"
               control={control}
               label={t("Rol")}
               options={[
@@ -100,7 +76,7 @@ function AddMember() {
                 type="email"
                 className="text"
                 placeholder={t("usuario@ejemplo.com")}
-                {...register("extra.invitation.email", {
+                {...register("email", {
                   required: true,
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -119,7 +95,7 @@ function AddMember() {
           type="submit"
           disabled={!isOwner}
           invalid={!isValid || !isDirty}
-          loading={createAgent.isPending}
+          loading={createInvitation.isPending}
           disabledReason={t("Requiere permisos de propietario")}
           className="primary"
         >

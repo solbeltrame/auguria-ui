@@ -23,7 +23,7 @@ function OnboardingTokenDetail() {
   const { data: tokens } = useOnboardingTokens("whatsapp");
   const { data: currentAgent } = useCurrentAgent();
   const deleteToken = useDeleteOnboardingToken("whatsapp");
-  const isOwner = currentAgent?.extra?.role === "owner";
+  const isOwner = currentAgent?.role === "owner";
   const [copied, setCopied] = useState(false);
 
   const token = tokens?.find((t) => t.id === tokenId);

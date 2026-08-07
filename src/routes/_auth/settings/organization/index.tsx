@@ -14,7 +14,6 @@ import { useMemo } from "react";
 import useBoundStore from "@/stores/useBoundStore";
 import Button from "@/components/Button";
 import SelectField from "@/components/SelectField";
-import TextAreaField from "@/components/TextAreaField";
 import { type OrganizationUpdate } from "@/supabase/client";
 
 export const Route = createFileRoute("/_auth/settings/organization/")({
@@ -34,7 +33,7 @@ function EditOrganization() {
   const navigate = useNavigate();
   const { data: org } = useCurrentOrganization();
   const { data: agent } = useCurrentAgent();
-  const isOwner = agent?.extra?.role === "owner";
+  const isOwner = agent?.role === "owner";
   const setActiveOrg = useBoundStore((state) => state.ui.setActiveOrg);
   const updateOrg = useUpdateCurrentOrganization();
   const deleteOrg = useDeleteCurrentOrganization();
@@ -89,29 +88,6 @@ function EditOrganization() {
               {...register("name", { required: true })}
             />
           </label>
-
-          <label>
-            <div className="label">{t("Demora de respuesta (segundos)")}</div>
-            <input
-              type="number"
-              className="text"
-              placeholder="3"
-              disabled={!isOwner}
-              {...register("extra.response_delay_seconds", {
-                valueAsNumber: true,
-              })}
-            />
-          </label>
-
-          <TextAreaField
-            control={control}
-            name="extra.welcome_message"
-            label={t("Mensaje de bienvenida")}
-            placeholder={t(
-              "Hola! Soy un agente virtual. ¿En qué puedo ayudarte?",
-            )}
-            disabled={!isOwner}
-          />
 
           <SelectField
             control={control}
