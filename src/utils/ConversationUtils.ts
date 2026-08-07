@@ -37,17 +37,8 @@ export function startConversation(conv: ConversationInsert) {
 
 // Per-member conversation state (archived/pinned/draft) lives on the caller's
 // own conversations_agents row — members hold no UPDATE on conversations
-// outside `local`.
-//
-// Update first, insert only when there is no row yet. A plain upsert does not
-// work: Postgres evaluates the INSERT policy's WITH CHECK even when ON CONFLICT
-// takes the UPDATE path, and 05-12 only lets a member CREATE a membership row
-// on a conversation that is visible WITHOUT it. So on a restricted conversation
-// — a `local` direct, a Slack chat our bot is not in — the upsert is refused
-// even though the member already owns the row it would have updated.
-//
-// Only `extra` is sent: the before-update merge trigger merges it key by key,
-// and an explicit null retracts one.
+// outside `local`. Upserted so the row is created the first time a preference
+// is set on a conversation the member is not a participant of.
 export const updateConvExtra = async (
   conversation: ConversationRow,
   extra: ConversationAgentExtra,
@@ -60,40 +51,20 @@ export const updateConvExtra = async (
 
   setMembershipExtra(conversation.id, extra);
 
-  const { data: updated, error: updateError } = await supabase
-    .from("conversations_agents")
-    .update({ extra })
-    .eq("conversation_id", conversation.id)
-    .eq("agent_id", ownAgentId)
-    .select("conversation_id");
+  const { error } = await supabase.from("conversations_agents").upsert(
+    {
+      organization_id: conversation.organization_id,
+      service: conversation.service,
+      organization_address: conversation.organization_address,
+      conversation_id: conversation.id,
+      agent_id: ownAgentId,
+      extra,
+    },
+    { onConflict: "conversation_id,agent_id" },
+  );
 
-  if (updateError) {
-    throw updateError;
-  }
-
-  if (updated.length) return;
-
-  // No row: the member is not a participant, which only happens on the
-  // conversations they see through the account rule — the ones the INSERT
-  // policy admits. Upserted rather than inserted so a second tab racing us to
-  // the same first preference lands on the update path instead of a duplicate
-  // key.
-  const { error: insertError } = await supabase
-    .from("conversations_agents")
-    .upsert(
-      {
-        organization_id: conversation.organization_id,
-        service: conversation.service,
-        organization_address: conversation.organization_address,
-        conversation_id: conversation.id,
-        agent_id: ownAgentId,
-        extra,
-      },
-      { onConflict: "conversation_id,agent_id" },
-    );
-
-  if (insertError) {
-    throw insertError;
+  if (error) {
+    throw error;
   }
 };
 

@@ -45,19 +45,19 @@ export default function ItemActions({
         : t("Archivar chat"),
       key: "1",
       onClick: () =>
-        void updateConvExtra(conversation, {
+        updateConvExtra(conversation, {
           archived: isArchived(membershipExtra, mostRecentMsg)
             ? null
             : new Date().toISOString(),
-        }).catch(console.error),
+        }),
     },
     {
       label: isPinned ? t("Desfijar chat") : t("Fijar chat"),
       key: "2",
       onClick: () =>
-        void updateConvExtra(conversation, {
+        updateConvExtra(conversation, {
           pinned: isPinned ? null : new Date().toISOString(),
-        }).catch(console.error),
+        }),
     },
   ];
 
