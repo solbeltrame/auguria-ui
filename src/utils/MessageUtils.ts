@@ -14,9 +14,6 @@ export function newMessage(
   content: OutgoingMessage | IncomingMessage | InternalMessage,
   agentId?: string,
   file?: File,
-  // "Send as contact": author the row in contact space, so it reads as
-  // incoming (sender_address is what direction derives from now).
-  asContact = false,
 ): MessageInsert {
   // If a file is provided, update the FilePart with file metadata
   if (file && content.type === "file") {
@@ -43,12 +40,13 @@ export function newMessage(
       conv.updated_at || conv.service === "local" ? conv.id : undefined,
     service: conv.service,
     organization_address: conv.organization_address,
-    // The peer the conversation is with — groups included; the sender of an
-    // outgoing row is us, so sender_address stays null.
+    // The peer the conversation is with — groups included. The UI only ever
+    // authors on our own side, so sender_address is always null: that IS what
+    // makes the row outgoing now that `direction` is gone.
     conversation_address: conv.address,
-    sender_address: asContact ? conv.address : null,
+    sender_address: null,
     content,
-    agent_id: asContact ? null : agentId || null,
+    agent_id: agentId || null,
   } as MessageInsert;
 }
 

@@ -74,7 +74,6 @@ export type UIState = {
   activeOrgId: string | null;
   activeConvId: string | null;
   user: User | null;
-  sendAsContact: boolean;
   filter: keyof typeof filters;
   searchPattern: string;
   isLoading: boolean;
@@ -86,7 +85,6 @@ export type UIActions = {
   setActiveOrg: (id: string | null) => void;
   setActiveConv: (id: string | null) => void;
   setUser: (user: User | null) => void;
-  setSendAsContact: (sendAsContact: boolean) => void;
   setFilter: (filter: keyof typeof filters) => void;
   setSearchPattern: (searchPattern: string) => void;
   setTemplateDraft: (convId: string, draft: TemplateDraft | null) => void;
@@ -110,7 +108,6 @@ export const createUISlice: StateCreator<Partial<AppState>> = (
   activeOrgId: null,
   activeConvId: null,
   user: null,
-  sendAsContact: false,
   filter: "todas" as keyof typeof filters,
   searchPattern: "",
   isLoading: false,
@@ -141,13 +138,6 @@ export const createUISlice: StateCreator<Partial<AppState>> = (
       ui: {
         ...state.ui,
         user,
-      },
-    })),
-  setSendAsContact: (sendAsContact: boolean) =>
-    set((state) => ({
-      ui: {
-        ...state.ui,
-        sendAsContact,
       },
     })),
   setFilter: (filter: keyof typeof filters) =>

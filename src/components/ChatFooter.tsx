@@ -82,8 +82,6 @@ export default function ChatFooter() {
   const draft: Draft | null | undefined = useBoundStore((store) =>
     store.chat.membershipExtras.get(store.ui.activeConvId || ""),
   )?.draft;
-  const sendAsContact = useBoundStore((store) => store.ui.sendAsContact);
-  const setSendAsContact = useBoundStore((store) => store.ui.setSendAsContact);
   const toggle = useBoundStore((store) => store.ui.toggle);
   const templatePicker = useBoundStore((store) => store.ui.templatePicker);
   const templateDraftEntry = useBoundStore((store) =>
@@ -207,25 +205,14 @@ export default function ChatFooter() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConvId, fileDrafts]);
 
-  // Set send as contact
+  // Load the stored draft
   useEffect(() => {
     if (!activeConvId || !conv) {
       return;
     }
 
-    // Note: conv.extra.draft is a DB stored draft; message (textDraft) is just an UI buffer
+    // Note: draft is the DB stored draft; message (textDraft) is just an UI buffer
     const shouldLoadDraft = inCSWindow && draft?.text && !message; // do not overwrite a current message
-
-    if (draft?.origin === "bot" || draft?.origin === "human-as-organization") {
-      // Draft defaults to send as organization
-      shouldLoadDraft && setSendAsContact(false);
-    } else if (conv.service === "local") {
-      // Internal testing service defaults to send as contact
-      setSendAsContact(true);
-    } else {
-      // WhatsApp defaults to send as organization
-      setSendAsContact(false);
-    }
 
     if (shouldLoadDraft) {
       clearTimeout(timer);
@@ -262,8 +249,6 @@ export default function ChatFooter() {
         text: message,
       },
       agentId,
-      undefined,
-      sendAsContact,
     );
 
     pushMessageToStore({ ...record, conversation_id: conv.id });
@@ -271,7 +256,7 @@ export default function ChatFooter() {
 
     setMessage("");
     // TODO: optimization: combine with the updateConvExtra call - cabra 2025-01-16
-    draft && saveDraft(conv, "", sendAsContact).catch(console.error);
+    draft && saveDraft(conv, "").catch(console.error);
 
     if (editableDiv.current) {
       editableDiv.current.textContent = "";
@@ -557,17 +542,11 @@ export default function ChatFooter() {
 
                     if (conv.created_at !== conv.updated_at) {
                       // no drafts for new convs, sorry!
-                      debounce(
-                        () => saveDraft(conv, message, sendAsContact),
-                        3000,
-                      ); // milliseconds
+                      debounce(() => saveDraft(conv, message), 3000); // milliseconds
                     }
                   }}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter" && event.ctrlKey) {
-                      // toggle("sendAsContact") is handled at window level, nonetheless this
-                      // no-op block prevents from sending the message when pressing ctrl+enter
-                    } else if (
+                    if (
                       event.key === "Enter" &&
                       !event.shiftKey &&
                       window.matchMedia("(min-width: 768px)").matches
@@ -622,15 +601,6 @@ export default function ChatFooter() {
                       ) : (
                         <span>{t("Conversación cerrada")}</span>
                       )
-                    ) : sendAsContact ? (
-                      <>
-                        <span className="lg:hidden">
-                          {t("Mensaje entrante")}
-                        </span>
-                        <span className="hidden lg:inline">
-                          {t("Simula un mensaje entrante")}
-                        </span>
-                      </>
                     ) : conv.service === "whatsapp" ||
                       conv.service === "instagram" ? (
                       <>
@@ -667,26 +637,11 @@ export default function ChatFooter() {
                 allVarsFilled && sendTemplateMessage().catch(console.error);
               } else if (message) {
                 sendTextMessage().catch(console.error);
-              } else if (conv.service === "local") {
-                // Only the internal service can simulate incoming messages
-                toggle("sendAsContact");
               }
             }}
-            title={
-              templateDraft
-                ? t("Enviar plantilla")
-                : sendAsContact
-                  ? t("Recibir mensaje")
-                  : t("Enviar mensaje")
-            }
+            title={templateDraft ? t("Enviar plantilla") : t("Enviar mensaje")}
           >
-            <svg
-              className={
-                "w-[24px] h-[24px] transition" +
-                (sendAsContact && !templateDraft ? " -scale-x-100" : "") +
-                " text-primary-foreground"
-              }
-            >
+            <svg className="w-[24px] h-[24px] transition text-primary-foreground">
               <use href="/icons.svg#send" />
             </svg>
           </button>

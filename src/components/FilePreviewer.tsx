@@ -43,7 +43,6 @@ const FilePreviewer = () => {
   const draft = useBoundStore((store) =>
     store.chat.membershipExtras.get(store.ui.activeConvId || ""),
   )?.draft;
-  const sendAsContact = useBoundStore((store) => store.ui.sendAsContact);
   const setMediaLoad = useBoundStore((store) => store.chat.setMediaLoad);
 
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -173,7 +172,6 @@ const FilePreviewer = () => {
         },
         agentId,
         draft.file,
-        sendAsContact,
       );
 
       setMediaLoad(record.id!, {
@@ -186,7 +184,7 @@ const FilePreviewer = () => {
     }
 
     setConversationTextDraft(activeConvId, "");
-    draft && saveDraft(conv, "", sendAsContact).catch(console.error);
+    draft && saveDraft(conv, "").catch(console.error);
     resetFiles();
   };
 
@@ -266,10 +264,7 @@ const FilePreviewer = () => {
                 );
               }}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && event.ctrlKey) {
-                  // toggle("sendAsContact") is handled at window level, nonetheless this
-                  // no-op block prevents from sending the message when pressing ctrl+enter
-                } else if (event.key === "Enter" && !event.shiftKey) {
+                if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
                   sendMediaMessages().catch(console.error);
                 }
@@ -360,12 +355,7 @@ const FilePreviewer = () => {
               onClick={sendMediaMessages}
               className="h-[60px] w-[60px] bg-primary rounded-full flex justify-center items-center cursor-pointer shadow-lg"
             >
-              <svg
-                className={
-                  "mb-[1px] w-[24px] h-[24px] text-primary-foreground transition" +
-                  (sendAsContact ? " -scale-x-100 mr-[4px] " : " ml-[4px] ")
-                }
-              >
+              <svg className="mb-[1px] ml-[4px] w-[24px] h-[24px] text-primary-foreground transition">
                 <use href="/icons.svg#send" />
               </svg>
             </button>
