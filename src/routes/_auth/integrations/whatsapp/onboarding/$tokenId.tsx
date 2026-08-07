@@ -42,9 +42,13 @@ function OnboardingTokenDetail() {
   }
 
   function copyLink() {
-    navigator.clipboard.writeText(onboardUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard
+      .writeText(onboardUrl)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(console.error);
   }
 
   return (

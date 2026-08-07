@@ -62,7 +62,7 @@ export function useCreateWebhook() {
       return webhook;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.webhooks.all(orgId),
       });
       queryClient.setQueryData<CachedResponse<WebhookRow>>(
@@ -93,7 +93,7 @@ export function useUpdateWebhook() {
       return webhook;
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.webhooks.all(orgId),
       });
       queryClient.setQueryData<CachedResponse<WebhookRow>>(
@@ -115,7 +115,7 @@ export function useDeleteWebhook() {
       await supabase.from("webhooks").delete().eq("id", id).throwOnError();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.webhooks.all(orgId),
       });
     },

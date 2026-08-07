@@ -93,7 +93,7 @@ export default function AudioMessage({
             onClick={() => {
               if (load.status === "done") {
                 if (audio && paused) {
-                  audio.play();
+                  void audio.play();
                 }
                 if (audio && !paused) {
                   audio.pause();

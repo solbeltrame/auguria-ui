@@ -7,7 +7,7 @@ export function useTranslation() {
   const setLanguage = useBoundStore((state) => state.ui.setLanguage);
 
   useEffect(() => {
-    loadTranslations(language);
+    loadTranslations(language).catch(console.error);
   }, [language]);
 
   return {

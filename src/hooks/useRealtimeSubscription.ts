@@ -62,7 +62,7 @@ export const useRealtimeSubscription = () => {
 
     // Cleanup subscription on unmount
     return () => {
-      channel.unsubscribe();
+      void channel.unsubscribe();
     };
   }, [activeOrgId]);
 };

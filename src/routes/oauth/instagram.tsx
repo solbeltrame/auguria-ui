@@ -35,7 +35,7 @@ function InstagramOAuthCallback() {
 
     // User canceled/denied: quietly return to the connect screen.
     if (error === "access_denied") {
-      navigate({ to: "/integrations/instagram/new", hash: "" });
+      void navigate({ to: "/integrations/instagram/new", hash: "" });
       return;
     }
 

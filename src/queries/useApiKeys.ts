@@ -62,7 +62,9 @@ export function useCreateApiKey() {
       return apiKey;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys.all(orgId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.apiKeys.all(orgId),
+      });
       queryClient.setQueryData<CachedResponse<ApiKeyRow>>(
         queryKeys.apiKeys.detail(orgId, data.id),
         (old) => (old ? { ...old, data } : { data, error: null }),
@@ -82,7 +84,9 @@ export function useDeleteApiKey() {
       await supabase.from("api_keys").delete().eq("id", id).throwOnError();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys.all(orgId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.apiKeys.all(orgId),
+      });
     },
   });
 }

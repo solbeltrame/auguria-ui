@@ -329,7 +329,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
             e.stopPropagation();
             e.preventDefault();
             // setActiveConv(itemId);
-            navigate({ to: "/conversations", hash: itemId });
+            void navigate({ to: "/conversations", hash: itemId });
           }}
         >
           <div className="profile-picture pl-[10px] pr-[15px] flex items-center">

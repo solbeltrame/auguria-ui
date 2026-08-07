@@ -18,7 +18,7 @@ function WhatsAppNew() {
   const [verifyToken, setVerifyToken] = useState("");
 
   const handleSuccess = (phone_number_id: string) => {
-    navigate({
+    void navigate({
       to: "/integrations/whatsapp/$orgAddressId",
       params: { orgAddressId: phone_number_id },
       hash: (prevHash) => prevHash!,

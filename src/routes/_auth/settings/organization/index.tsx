@@ -65,7 +65,7 @@ function EditOrganization() {
           deleteOrg.mutate(undefined, {
             onSuccess: () => {
               setActiveOrg(null);
-              navigate({ to: "/conversations" });
+              void navigate({ to: "/conversations" });
             },
           })
         }

@@ -41,7 +41,7 @@ function WhatsAppWebNew() {
   // On "paired" the backend has already upserted the channel row; hand off.
   useEffect(() => {
     if (poll.data?.status === "paired" && poll.data.address) {
-      navigate({
+      void navigate({
         to: "/integrations/whatsapp-web/$orgAddressId",
         params: { orgAddressId: poll.data.address },
         hash: (prevHash) => prevHash!,

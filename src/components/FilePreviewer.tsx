@@ -186,7 +186,7 @@ const FilePreviewer = () => {
     }
 
     setConversationTextDraft(activeConvId, "");
-    draft && saveDraft(conv, "", sendAsContact);
+    draft && saveDraft(conv, "", sendAsContact).catch(console.error);
     resetFiles();
   };
 
@@ -271,7 +271,7 @@ const FilePreviewer = () => {
                   // no-op block prevents from sending the message when pressing ctrl+enter
                 } else if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
-                  sendMediaMessages();
+                  sendMediaMessages().catch(console.error);
                 }
               }}
             />

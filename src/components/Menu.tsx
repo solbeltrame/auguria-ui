@@ -135,7 +135,7 @@ export default function Menu() {
                     label: org.name,
                     onClick: () => {
                       setActiveOrg(org.id);
-                      navigate({ to: "/conversations" });
+                      void navigate({ to: "/conversations" });
                     },
                   })) || []),
                   {
@@ -179,8 +179,8 @@ export default function Menu() {
                 label: t("Cerrar sesión"),
                 icon: <LogOut className="w-[16px] h-[16px]" />,
                 onClick: () => {
-                  supabase.auth.signOut();
-                  resetAuthorizedCache();
+                  void supabase.auth.signOut();
+                  resetAuthorizedCache().catch(console.error);
                 },
               },
             ],

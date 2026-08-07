@@ -119,8 +119,8 @@ export const useInitialDataFetch = () => {
   };
 
   useEffect(() => {
-    initData();
-    loadMemberships();
+    initData().catch(console.error);
+    loadMemberships().catch(console.error);
 
     lastVisibleAt.current = new Date();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,8 +134,8 @@ export const useInitialDataFetch = () => {
         document.visibilityState === "visible" &&
         lastVisibleAt.current
       ) {
-        loadConvs(lastVisibleAt.current);
-        loadMsgs(lastVisibleAt.current);
+        loadConvs(lastVisibleAt.current).catch(console.error);
+        loadMsgs(lastVisibleAt.current).catch(console.error);
       }
     };
 

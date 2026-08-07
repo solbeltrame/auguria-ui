@@ -33,7 +33,7 @@ export function useAuth() {
 
       // Signed in
       if (!loggedUser && user && event === "SIGNED_IN") {
-        navigate({
+        void navigate({
           to: redirect || "/",
         });
       }
@@ -48,7 +48,7 @@ export function useAuth() {
         queryClient.clear();
         setActiveOrg(null);
 
-        navigate({
+        void navigate({
           to: "/login",
           search: { redirect: window.location.pathname + window.location.hash },
         });

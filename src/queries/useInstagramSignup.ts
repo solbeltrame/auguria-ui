@@ -53,7 +53,7 @@ export function useInstagramSignup() {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.addresses(organization_id),
       });
     },
@@ -74,7 +74,7 @@ export function useInstagramDisconnect() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.addresses(organization_id),
       });
     },

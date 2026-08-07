@@ -36,7 +36,7 @@ function NewOrganization() {
             createOrg.mutate(data, {
               onSuccess: (org) => {
                 setActiveOrg(org.id);
-                navigate({ to: "/conversations" });
+                void navigate({ to: "/conversations" });
               },
             }),
           )}

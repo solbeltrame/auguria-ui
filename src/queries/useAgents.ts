@@ -87,7 +87,7 @@ export function useCreateInvitation() {
       return invitation;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.invitations.all(orgId),
       });
     },
@@ -107,7 +107,7 @@ export function useRevokeInvitation() {
         .throwOnError();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.invitations.all(orgId),
       });
     },
@@ -139,10 +139,10 @@ export function useAnswerInvitation() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.invitations.mine(),
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
     },
@@ -205,7 +205,7 @@ export function useCreateAgent() {
       return agent;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.agents.all(orgId),
       });
       queryClient.setQueryData<CachedResponse<AgentRow>>(
@@ -235,7 +235,7 @@ export function useUpdateAgent() {
       return agent;
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.agents.all(data.organization_id),
       });
       // Use function updater to preserve the Supabase response wrapper.
@@ -260,7 +260,7 @@ export function useDeleteAgent() {
       await supabase.from("agents").delete().eq("id", id).throwOnError();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.agents.all(orgId),
       });
     },

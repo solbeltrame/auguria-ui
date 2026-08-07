@@ -112,7 +112,7 @@ export function useDisconnectWhatsAppWeb() {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.addresses(orgId),
       });
     },

@@ -48,13 +48,13 @@ function EditMember() {
       onSuccess: () => {
         if (isMe) {
           // If the user deletes themself, invalidate organizations and redirect to conversations
-          queryClient.invalidateQueries({
+          void queryClient.invalidateQueries({
             queryKey: queryKeys.organizations.all(),
           });
           setActiveOrg(null);
-          navigate({ to: "/conversations" });
+          void navigate({ to: "/conversations" });
         } else {
-          navigate({ to: "..", hash: (prevHash) => prevHash! });
+          void navigate({ to: "..", hash: (prevHash) => prevHash! });
         }
       },
     });

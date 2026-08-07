@@ -53,7 +53,7 @@ function WhatsAppDetails() {
       { phone_number_id: integration.address },
       {
         onSuccess: () => {
-          navigate({ to: "/integrations/whatsapp" });
+          void navigate({ to: "/integrations/whatsapp" });
         },
       },
     );

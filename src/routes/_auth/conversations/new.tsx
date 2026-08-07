@@ -91,7 +91,7 @@ function NewChat() {
               });
 
               //setActiveConv(convId!);
-              navigate({ to: "/conversations", hash: convId });
+              void navigate({ to: "/conversations", hash: convId });
             }}
           />
         )}
@@ -117,7 +117,7 @@ function NewChat() {
                 });
 
                 // setActiveConv(convId!);
-                navigate({ to: "/conversations", hash: convId });
+                void navigate({ to: "/conversations", hash: convId });
               }}
             />
           )}

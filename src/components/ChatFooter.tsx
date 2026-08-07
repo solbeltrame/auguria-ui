@@ -271,7 +271,7 @@ export default function ChatFooter() {
 
     setMessage("");
     // TODO: optimization: combine with the updateConvExtra call - cabra 2025-01-16
-    draft && saveDraft(conv, "", sendAsContact);
+    draft && saveDraft(conv, "", sendAsContact).catch(console.error);
 
     if (editableDiv.current) {
       editableDiv.current.textContent = "";
@@ -457,7 +457,7 @@ export default function ChatFooter() {
                   allVarsFilled &&
                   window.matchMedia("(min-width: 768px)").matches
                 ) {
-                  sendTemplateMessage();
+                  sendTemplateMessage().catch(console.error);
                 }
               }}
               autoFocus={i === parts.findIndex((p) => typeof p !== "string")}
@@ -573,7 +573,7 @@ export default function ChatFooter() {
                       window.matchMedia("(min-width: 768px)").matches
                     ) {
                       event.preventDefault();
-                      sendTextMessage();
+                      sendTextMessage().catch(console.error);
                     }
                   }}
                   onClick={() =>
@@ -664,9 +664,9 @@ export default function ChatFooter() {
             }
             onClick={() => {
               if (templateDraft) {
-                allVarsFilled && sendTemplateMessage();
+                allVarsFilled && sendTemplateMessage().catch(console.error);
               } else if (message) {
-                sendTextMessage();
+                sendTextMessage().catch(console.error);
               } else if (conv.service === "local") {
                 // Only the internal service can simulate incoming messages
                 toggle("sendAsContact");

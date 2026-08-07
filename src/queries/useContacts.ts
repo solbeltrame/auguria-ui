@@ -154,7 +154,7 @@ export function useCreateContact() {
       return contact;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.contacts.all(orgId),
       });
     },
@@ -269,7 +269,7 @@ export function useUpdateContact() {
       return contact;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.contacts.all(orgId),
       });
     },
@@ -287,7 +287,7 @@ export function useDeleteContact() {
       await supabase.from("contacts").delete().eq("id", id).throwOnError();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.contacts.all(orgId),
       });
     },

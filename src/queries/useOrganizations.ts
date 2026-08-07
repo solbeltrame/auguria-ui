@@ -71,7 +71,7 @@ export function useCreateOrganization() {
       return org;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
       queryClient.setQueryData<CachedResponse<OrganizationRow>>(
@@ -101,7 +101,7 @@ export function useUpdateCurrentOrganization() {
       return org;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
       queryClient.setQueryData<CachedResponse<OrganizationRow>>(
@@ -127,7 +127,7 @@ export function useDeleteCurrentOrganization() {
         .throwOnError();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
     },

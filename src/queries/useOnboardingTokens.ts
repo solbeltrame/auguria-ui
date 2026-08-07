@@ -73,7 +73,7 @@ export function useCreateOnboardingToken(service: OnboardingService) {
       return data as OnboardingTokenRow;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.onboardingTokens.all(orgId, service),
       });
     },
@@ -95,7 +95,7 @@ export function useDeleteOnboardingToken(service: OnboardingService) {
         .throwOnError();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.onboardingTokens.all(orgId, service),
       });
     },

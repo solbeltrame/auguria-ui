@@ -50,7 +50,7 @@ export function useCreateTemplate() {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["templates", activeOrgId, variables.organizationAddress],
       });
     },
@@ -79,7 +79,7 @@ export function useUpdateTemplate() {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["templates", activeOrgId, variables.organizationAddress],
       });
     },
@@ -108,7 +108,7 @@ export function useDeleteTemplate() {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["templates", activeOrgId, variables.organizationAddress],
       });
     },

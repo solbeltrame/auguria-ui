@@ -46,7 +46,7 @@ const useBoundStore = create<AppState>()(
             ...state.ui,
           };
           if (state.ui.language && state.ui.language !== "es") {
-            loadTranslations(state.ui.language);
+            loadTranslations(state.ui.language).catch(console.error);
           }
         }
       },

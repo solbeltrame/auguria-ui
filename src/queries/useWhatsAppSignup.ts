@@ -22,7 +22,7 @@ export function useWhatsAppSignup() {
       return address;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.addresses(organization_id),
       });
       queryClient.setQueryData<CachedResponse<OrganizationAddressRow>>(
@@ -51,7 +51,7 @@ export function useWhatsAppDisconnect() {
       return address;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.addresses(organization_id),
       });
       queryClient.setQueryData<CachedResponse<OrganizationAddressRow>>(

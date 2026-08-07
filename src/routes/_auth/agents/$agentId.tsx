@@ -91,7 +91,7 @@ function AgentDetail() {
       name: agent?.name,
     });
 
-    navigate({ hash: convId });
+    void navigate({ hash: convId });
   };
 
   return (

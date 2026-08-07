@@ -29,9 +29,13 @@ function ApiKeyDetail() {
 
   function copyKey() {
     if (apiKey?.key) {
-      navigator.clipboard.writeText(apiKey.key);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      navigator.clipboard
+        .writeText(apiKey.key)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(console.error);
     }
   }
 
