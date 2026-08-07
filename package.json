@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run lint && tsc -b",
     "preview": "vite preview",
     "types:sync-check": "bash scripts/check-type-sync.sh"
   },

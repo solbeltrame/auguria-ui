@@ -1,7 +1,10 @@
 import {
   type MessageRow,
   type OutgoingStatus,
-  type ToolInfo, type Direction, messageDirection } from "@/supabase/client";
+  type ToolInfo,
+  type Direction,
+  messageDirection,
+} from "@/supabase/client";
 import AudioMessage from "./AudioMessage";
 import DocumentMessage from "./DocumentMessage";
 import ImageMessage from "./ImageMessage";

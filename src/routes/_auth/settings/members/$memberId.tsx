@@ -36,7 +36,8 @@ function EditMember() {
 
   // Count owners to prevent deleting the last one
   const ownersCount =
-    allAgents?.filter((a) => a.user_id !== null && a.role === "owner").length || 0;
+    allAgents?.filter((a) => a.user_id !== null && a.role === "owner").length ||
+    0;
   const isLastOwner = agent?.role === "owner" && ownersCount <= 1;
 
   const updateAgent = useUpdateAgent();
@@ -113,7 +114,6 @@ function EditMember() {
             disabled={!isOwner}
             required
           />
-
         </form>
       </SectionBody>
 

@@ -10,6 +10,17 @@ Read the [OpenBSP API README](../open-bsp-api/README.md) for project context,
 architecture, deployment, and **local development workflow** (database schema
 changes, migrations, type generation).
 
+## Before committing
+
+Run **`npm run check`** (prettier + eslint + tsc — the exact CI gate in
+`.github/workflows/check.yml`). `npm run format` fixes formatting.
+
+The `.claude/hooks/check-edited.sh` PostToolUse hook only formats files touched
+by Edit/Write; **files rewritten through Bash (sed, python heredocs, `cat >`)
+skip it entirely** and are the usual cause of a red `prettier --check` in CI.
+After any scripted bulk edit, run `npm run check` — a `.githooks/pre-push` hook
+enforces the same gate if `core.hooksPath` is configured.
+
 ## Key Conventions
 
 - **Schema files** live in `../open-bsp-api/supabase/schemas/` — always edit

@@ -11,7 +11,9 @@ import { type FileDraft } from "@/stores/chatSlice";
 import {
   type Draft,
   type MessageRow,
-  type TemplateMessage, isIncoming } from "@/supabase/client";
+  type TemplateMessage,
+  isIncoming,
+} from "@/supabase/client";
 import { TickContext } from "@/contexts/useTick";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
@@ -77,8 +79,8 @@ export default function ChatFooter() {
   const conv = useBoundStore((store) =>
     store.chat.conversations.get(store.ui.activeConvId || ""),
   );
-  const draft: Draft | null | undefined = useBoundStore(
-    (store) => store.chat.membershipExtras.get(store.ui.activeConvId || ""),
+  const draft: Draft | null | undefined = useBoundStore((store) =>
+    store.chat.membershipExtras.get(store.ui.activeConvId || ""),
   )?.draft;
   const sendAsContact = useBoundStore((store) => store.ui.sendAsContact);
   const setSendAsContact = useBoundStore((store) => store.ui.setSendAsContact);

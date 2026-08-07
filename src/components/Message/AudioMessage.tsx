@@ -7,7 +7,11 @@ import Avatar from "../Avatar";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { nameInitials } from "@/utils/FormatUtils";
-import { type MessageRow, type OutgoingStatus, messageDirection } from "@/supabase/client";
+import {
+  type MessageRow,
+  type OutgoingStatus,
+  messageDirection,
+} from "@/supabase/client";
 dayjs.extend(duration);
 
 export default function AudioMessage({
@@ -19,7 +23,12 @@ export default function AudioMessage({
   orgName: string;
   convName: string;
 }) {
-  if (!(messageDirection(message) === "incoming" || messageDirection(message) === "outgoing")) {
+  if (
+    !(
+      messageDirection(message) === "incoming" ||
+      messageDirection(message) === "outgoing"
+    )
+  ) {
     throw new Error(`Message with id ${message.id} is not a BaseMessage.`);
   }
 
@@ -73,7 +82,9 @@ export default function AudioMessage({
         <div
           className={
             "grow flex items-center pb-[5px]" +
-            (messageDirection(message) === "incoming" ? " mr-[11px]" : " ml-[11px]")
+            (messageDirection(message) === "incoming"
+              ? " mr-[11px]"
+              : " ml-[11px]")
           }
         >
           {/* Load/Play/Pause button */}
@@ -216,13 +227,16 @@ export default function AudioMessage({
         <div
           className={
             "relative" +
-            (messageDirection(message) === "incoming" ? " order-last" : " order-first")
+            (messageDirection(message) === "incoming"
+              ? " order-last"
+              : " order-first")
           }
         >
           <Avatar
             // TODO: use agent name and pic - cabra 16/01/2025
             fallback={nameInitials(
-              (messageDirection(message) === "incoming" ? convName : orgName) || "?",
+              (messageDirection(message) === "incoming" ? convName : orgName) ||
+                "?",
             )}
             size={55}
             className="bg-primary text-xl"
@@ -230,7 +244,9 @@ export default function AudioMessage({
           <svg
             className={
               "w-[19px] h-[26px] absolute -bottom-[2px]" +
-              (messageDirection(message) === "incoming" ? " left-0" : " right-0")
+              (messageDirection(message) === "incoming"
+                ? " left-0"
+                : " right-0")
             }
           >
             {/* TODO: out message mic background should match the green background of the message - cabra 05/06/2024 */}

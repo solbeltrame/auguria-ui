@@ -6,7 +6,11 @@ import localizedFormat from "dayjs/plugin/localizedFormat";
 dayjs.extend(localizedFormat);
 import useBoundStore from "@/stores/useBoundStore";
 import Message from "./Message/Message";
-import { type MessageRow, isInternal, messageDirection } from "@/supabase/client";
+import {
+  type MessageRow,
+  isInternal,
+  messageDirection,
+} from "@/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useCurrentOrganization } from "@/queries/useOrganizations";
 import { useCurrentAgent } from "@/queries/useAgents";

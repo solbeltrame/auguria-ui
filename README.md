@@ -112,6 +112,22 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
+### Checks
+
+CI (`.github/workflows/check.yml`) runs Prettier, ESLint and `tsc`. The same
+gate is one command:
+
+```bash
+npm run check    # prettier --check . && eslint . && tsc -b
+npm run format   # fix formatting
+```
+
+Enable the pre-push hook once per clone so a red build never reaches CI:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ### i18n (Internationalization)
 
 The UI is written in Spanish (the default language) and supports English,

@@ -4,7 +4,11 @@ import StatusIcon from "./StatusIcon";
 import { useMedia } from "@/hooks/useMedia";
 import { fileSize } from "./DocumentMessage";
 import dayjs from "dayjs";
-import { type MessageRow, type OutgoingStatus, messageDirection } from "@/supabase/client";
+import {
+  type MessageRow,
+  type OutgoingStatus,
+  messageDirection,
+} from "@/supabase/client";
 import { Markdown } from "./Message";
 import { mediaCategory } from "./media";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -15,7 +19,12 @@ const MAX_PORTRAIT_HEIGHT = (PORTRAIT_WIDTH * 4) / 3;
 const MAX_LANDSCAPE_HEIGHT = (LANDSCAPE_WIDTH * 3) / 4;
 
 export default function VideoMessage(message: MessageRow) {
-  if (!(messageDirection(message) === "incoming" || messageDirection(message) === "outgoing")) {
+  if (
+    !(
+      messageDirection(message) === "incoming" ||
+      messageDirection(message) === "outgoing"
+    )
+  ) {
     throw new Error(`Message with id ${message.id} is not a BaseMessage.`);
   }
 

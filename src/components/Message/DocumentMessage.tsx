@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import StatusIcon from "./StatusIcon";
 import { useMedia } from "@/hooks/useMedia";
-import { type MessageRow, type OutgoingStatus, messageDirection } from "@/supabase/client";
+import {
+  type MessageRow,
+  type OutgoingStatus,
+  messageDirection,
+} from "@/supabase/client";
 import dayjs from "dayjs";
 import { Markdown } from "./Message";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -63,7 +67,12 @@ export function isImage(type: string) {
 }
 
 export default function DocumentMessage(message: MessageRow) {
-  if (!(messageDirection(message) === "incoming" || messageDirection(message) === "outgoing")) {
+  if (
+    !(
+      messageDirection(message) === "incoming" ||
+      messageDirection(message) === "outgoing"
+    )
+  ) {
     throw new Error(`Message with id ${message.id} is not a BaseMessage.`);
   }
 

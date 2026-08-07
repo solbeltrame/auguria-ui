@@ -110,16 +110,13 @@ function AddAgent() {
   const model = useWatch({ control, name: "extra.model" });
 
   const onSubmit = (data: AIAgentInsert) => {
-    createAgent.mutate(
-      data,
-      {
-        onSuccess: (agent) =>
-          navigate({
-            to: `/agents/${agent.id}`,
-            hash: (prevHash) => prevHash!,
-          }),
-      },
-    );
+    createAgent.mutate(data, {
+      onSuccess: (agent) =>
+        navigate({
+          to: `/agents/${agent.id}`,
+          hash: (prevHash) => prevHash!,
+        }),
+    });
   };
 
   return (

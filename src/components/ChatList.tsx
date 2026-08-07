@@ -16,7 +16,6 @@ function pinnedAscending(
   aPin: string | null | undefined,
   bPin: string | null | undefined,
 ) {
-
   if (!aPin && !bPin) {
     return 0;
   }
@@ -33,7 +32,9 @@ const ChatList = () => {
   const activeOrgId = useBoundStore((state) => state.ui.activeOrgId);
   const conversations = useBoundStore((state) => state.chat.conversations);
   const messages = useBoundStore((state) => state.chat.messages);
-  const membershipExtras = useBoundStore((state) => state.chat.membershipExtras);
+  const membershipExtras = useBoundStore(
+    (state) => state.chat.membershipExtras,
+  );
   const filterName = useBoundStore((state) => state.ui.filter);
   const setFilterName = useBoundStore((state) => state.ui.setFilter);
   const searchPattern = useBoundStore((state) => state.ui.searchPattern);
@@ -76,8 +77,7 @@ const ChatList = () => {
         pinnedAscending(
           membershipExtras.get(a.convId)?.pinned,
           membershipExtras.get(b.convId)?.pinned,
-        ) ||
-        timestampDescending(a.mostRecentMsg, b.mostRecentMsg),
+        ) || timestampDescending(a.mostRecentMsg, b.mostRecentMsg),
     );
   }
 

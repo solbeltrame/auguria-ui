@@ -273,7 +273,9 @@ function AgentDetail() {
               )}
 
               <label>
-                <div className="label">{t("Demora de respuesta (segundos)")}</div>
+                <div className="label">
+                  {t("Demora de respuesta (segundos)")}
+                </div>
                 <input
                   type="number"
                   className="text"
