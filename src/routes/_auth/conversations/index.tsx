@@ -41,13 +41,27 @@ function Conversations() {
           {invitations.map((invitation) => (
             <div key={invitation.id} className="bg-primary/10 rounded-lg">
               <SectionItem
-                className="h-[92px]"
-                title={t("Invitación pendiente")}
+                // min-h, not h: it has to override SectionItem's own h-[72px],
+                // and min-height beats height whatever order the two land in.
+                className="min-h-[112px]"
+                title={
+                  invitation.organization_name || t("Invitación pendiente")
+                }
                 description={
                   <div className="flex flex-col gap-[6px] w-full">
                     <p>
-                      {invitation.email} ({roles[invitation.role || "member"]})
+                      {t("Te invitaron como")}{" "}
+                      {roles[invitation.role || "member"]}
+                      {/* Null when the inviter is gone, or was never named. */}
+                      {invitation.invited_by_name && (
+                        <> · {invitation.invited_by_name}</>
+                      )}
                     </p>
+                    {invitation.invited_by_email && (
+                      <p className="text-[13px] opacity-75">
+                        {invitation.invited_by_email}
+                      </p>
+                    )}
                     <div className="flex gap-[16px] justify-end">
                       {answerInvitation.isPending ? (
                         <Spinner size={16} />
