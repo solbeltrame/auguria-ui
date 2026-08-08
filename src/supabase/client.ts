@@ -61,4 +61,4 @@ export async function invokeFunction<T>(
 
 export type Status = IncomingStatus & OutgoingStatus;
 export type MessageTypes = IncomingMessage["type"] | OutgoingMessage["type"];
-export type Draft = { text: string; origin: string; timestamp: string };
+export type Draft = { text: string; timestamp: string };

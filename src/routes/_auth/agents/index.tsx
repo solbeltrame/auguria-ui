@@ -21,7 +21,6 @@ function ListAgents() {
 
   const modeLabels: Record<string, string | JSX.Element> = {
     active: <span className="text-primary">{t("Activo")}</span>,
-    draft: t("Borrador"),
     inactive: t("Inactivo"),
   };
 

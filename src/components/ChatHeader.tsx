@@ -94,7 +94,6 @@ export default function Header() {
         </div>
         <div className="text-[13px] text-muted-foreground truncate">
           {isGroup && t("Grupo")}
-          {service === "local" && t("Contacto de prueba")}
           {(service === "whatsapp" || service === "whatsapp-web") &&
             address &&
             formatPhoneNumber(address)}

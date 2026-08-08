@@ -247,14 +247,11 @@ export default function Chat() {
   // If the role is not admin, then do not show internal messages (tool calls, etc).
   const envelopesAndSeparators = insertDateSeparators(
     messages
-      .filter((m, idx) => {
+      .filter((m) => {
         if (isAdmin) return true;
 
         // Hide internal messages for non-admin users
         if (isInternal(m)) return false;
-
-        // @ts-expect-error draft is deprecated
-        if (m.kind === "draft" && idx !== 0) return false;
 
         return true;
       })

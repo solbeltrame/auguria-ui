@@ -16,7 +16,6 @@ export type ConversationAgentExtra = {
   pinned?: string | null;
   draft?: {
     text: string;
-    origin: string;
     timestamp: string;
   } | null;
 };

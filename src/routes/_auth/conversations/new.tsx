@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import useBoundStore from "@/stores/useBoundStore";
-import { Search, X, MessageSquarePlus, MessageCircle } from "lucide-react";
+import { Search, X, MessageCircle } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { startConversation } from "@/utils/ConversationUtils";
 import { useState } from "react";
@@ -19,10 +19,6 @@ function NewChat() {
   const navigate = useNavigate();
   const { data: addresses } = useOrganizationsAddresses();
   const activeOrgId = useBoundStore((state) => state.ui.activeOrgId);
-
-  const localAddress = addresses?.find(
-    (address) => address.service === "local",
-  );
 
   const whatsappAddresses = addresses?.filter(
     (address) => address.service === "whatsapp",
@@ -70,32 +66,6 @@ function NewChat() {
       </div>
 
       <SectionBody>
-        {localAddress && (
-          <SectionItem
-            title={t("Nueva conversación de prueba")}
-            aside={
-              <div className="p-[8px] bg-primary/10 rounded-full">
-                <MessageSquarePlus className="w-[24px] h-[24px] text-primary" />
-              </div>
-            }
-            onClick={() => {
-              if (!activeOrgId) {
-                return;
-              }
-
-              const convId = startConversation({
-                name: t("Conversación de prueba"),
-                organization_id: activeOrgId,
-                organization_address: localAddress.address,
-                service: "local",
-              });
-
-              //setActiveConv(convId!);
-              void navigate({ to: "/conversations", hash: convId });
-            }}
-          />
-        )}
-
         {!!whatsappAddresses?.length &&
           phoneNumber.replace(/\D/g, "").length >= 10 && (
             <SectionItem

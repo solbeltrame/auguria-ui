@@ -108,10 +108,6 @@ export async function saveDraft(conv: ConversationRow, text: string | null) {
       ? {
           text,
           timestamp: new Date().toISOString(),
-          // "human" or "bot" — the two authors left. The old
-          // human-as-contact/human-as-organization split went with
-          // "send as contact".
-          origin: "human",
         }
       : null,
   });

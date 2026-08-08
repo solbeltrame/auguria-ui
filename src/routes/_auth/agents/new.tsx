@@ -148,7 +148,6 @@ function AddAgent() {
               label={t("Estado")}
               options={[
                 { value: "active", label: t("Activo") },
-                { value: "draft", label: t("Borrador") },
                 { value: "inactive", label: t("Inactivo") },
               ]}
             />
