@@ -95,7 +95,13 @@ export type OrganizationAddressExtra =
  */
 export type ConversationExtra = {
   memory?: Memory;
-  /** UI preferences; moving to conversations_agents.extra, where they are per-member. */
+  /**
+   * UI preferences, org-wide — which is not what they mean. Per-member is
+   * where they belong, and not on conversations_agents: rows there GRANT
+   * VISIBILITY, so writing one is gated on the conversation being visible
+   * without it (05-12), and a preference must be settable on anything you can
+   * see. They need a table of their own.
+   */
   archived?: string;
   pinned?: string;
   /**
@@ -120,16 +126,6 @@ export type ConversationExtra = {
   purpose?: string;
   /** im only: the counterpart Slack user id */
   user?: string;
-  /*
-  test_run?: {
-    reference_conversation: {
-      organization_address: string;
-      contact_address: string;
-    };
-    status?: "fail" | "success";
-    reference_message_id?: string;
-  };
-  */
 };
 
 export type ContactExtra = Record<PropertyKey, never>;
