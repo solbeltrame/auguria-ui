@@ -12,7 +12,7 @@ import { useForm, useWatch } from "react-hook-form";
 import SectionBody from "@/components/SectionBody";
 import useBoundStore from "@/stores/useBoundStore";
 import { type AIAgentRow, type AIAgentUpdate } from "@/supabase/client";
-import { startConversation } from "@/utils/ConversationUtils";
+import { openLocalDirect } from "@/utils/ConversationUtils";
 import { useOrganizationsAddresses } from "@/queries/useOrganizationsAddresses";
 import SectionFooter from "@/components/SectionFooter";
 import {
@@ -77,17 +77,17 @@ function AgentDetail() {
 
   const model = useWatch({ control, name: "extra.model" });
 
-  const handleChat = () => {
+  const handleChat = async () => {
     if (!activeOrgId || !localAddress || !currentAgent) return;
 
     // A local DM with the AI agent: a direct is DEFINED by its roster, so the
-    // address IS the participant list (sorted agent ids) — no per-conversation
-    // agent override exists any more.
-    const convId = startConversation({
+    // address IS the participant list — no per-conversation agent override
+    // exists any more. Which also means there is only ever ONE of these, so
+    // this opens the room rather than starting a new one.
+    const convId = await openLocalDirect({
       organization_id: activeOrgId,
       organization_address: localAddress.address,
-      service: "local",
-      address: [currentAgent.id, agentId].sort().join(":"),
+      roster: [currentAgent.id, agentId],
       name: agent?.name,
     });
 
@@ -354,7 +354,11 @@ function AgentDetail() {
 
         <SectionFooter>
           {!isDirty ? (
-            <button type="button" className="primary" onClick={handleChat}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => void handleChat()}
+            >
               {t("Chatea con este agente")}
             </button>
           ) : (

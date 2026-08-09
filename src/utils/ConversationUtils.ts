@@ -15,24 +15,8 @@ function pushConversationToStore(record: ConversationInsert) {
 // the conversation row is minted by the first message's insert trigger, so
 // this is a no-op there.
 //
-// ROUGH EDGE — a `local` direct is now identified by its ROSTER, not by the id
-// we mint here. before_insert_on_conversations canonicalises the address to the
-// sorted agent ids, and conversations_identity_idx is unique on
-// (organization_id, organization_address, service, address), so the SECOND time
-// the UI opens the same room this insert dies with a duplicate key. It bites
-// both roster-addressed rooms we can open twice:
-//
-//   - the agent DM (routes/_auth/agents/$agentId.tsx), and
-//   - "nueva conversación de prueba" (routes/_auth/conversations/new.tsx),
-//     which states no address at all and so canonicalises to a roster of ONE —
-//     your own agent id. There is exactly one of those per member, forever.
-//
-// The way out is already in the API: before_insert_on_messages resolves-or-
-// creates on (organization_id, service, organization_address,
-// conversation_address), so the client should state the canonical address and
-// never mint a conversation id. That is a store change (conversations are keyed
-// by id, and an optimistic row would have to adopt the id the insert answers
-// with), so it is not done here.
+// Safe to call twice only because openLocalDirect below guarantees the roster
+// is not already taken — the id here is ours, but the IDENTITY is the address.
 export async function pushConversationToDb(record: ConversationInsert) {
   if (record.service !== "local") return;
 
@@ -43,15 +27,77 @@ export async function pushConversationToDb(record: ConversationInsert) {
   }
 }
 
-export function startConversation(conv: ConversationInsert) {
-  const record: ConversationInsert = {
-    ...conv,
-    id: crypto.randomUUID(),
-  };
+export function startConversation(conv: ConversationInsert): string {
+  const id = crypto.randomUUID();
 
-  pushConversationToStore(record);
+  pushConversationToStore({ ...conv, id });
 
-  return record.id;
+  return id;
+}
+
+/**
+ * Opens the `local` direct between these people, creating it only if there is
+ * not one already. Returns the conversation id to navigate to.
+ *
+ * A local direct is identified by its ROSTER, not by the id we mint:
+ * before_insert_on_conversations canonicalises the address to the sorted agent
+ * ids and conversations_identity_idx is unique on (organization_id,
+ * organization_address, service, address). So minting an id every time asks
+ * for a SECOND conversation between the same two people, and the index refuses
+ * it — which is what "duplicate key value violates conversations_identity_idx"
+ * was: the button worked exactly once per agent.
+ *
+ * Sorting here agrees with the trigger's `order by a.id`: agent ids render as
+ * lowercase hex, where lexicographic order is byte order.
+ *
+ * The store answers first, the DB second. Both are needed — the initial fetch
+ * is windowed (init_data, by recency), so a room nobody has written in lately
+ * is perfectly visible and simply not loaded.
+ */
+export async function openLocalDirect(conv: {
+  organization_id: string;
+  organization_address: string;
+  roster: string[];
+  name?: string | null;
+}): Promise<string> {
+  const address = [...conv.roster].sort().join(":");
+
+  for (const loaded of useBoundStore.getState().chat.conversations.values()) {
+    if (
+      loaded.service === "local" &&
+      loaded.organization_id === conv.organization_id &&
+      loaded.organization_address === conv.organization_address &&
+      loaded.address === address
+    ) {
+      return loaded.id;
+    }
+  }
+
+  const { data: existing, error } = await supabase
+    .from("conversations")
+    .select()
+    .eq("organization_id", conv.organization_id)
+    .eq("organization_address", conv.organization_address)
+    .eq("service", "local")
+    .eq("address", address)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (existing) {
+    // Outside the window, so the store has never seen it.
+    pushConversationToStore(existing);
+
+    return existing.id;
+  }
+
+  return startConversation({
+    organization_id: conv.organization_id,
+    organization_address: conv.organization_address,
+    service: "local",
+    address,
+    name: conv.name,
+  });
 }
 
 // Per-member conversation state (archived/pinned/draft) lives on the caller's

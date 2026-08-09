@@ -9,6 +9,7 @@ import {
   type OutgoingStatus,
   isInternal,
   isIncoming,
+  isMultiParty,
   isOutgoing,
   isTeamChat,
 } from "@/supabase/client";
@@ -169,6 +170,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
   const isGroup = conversation?.type === "group";
   const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
   const teamChat = isTeamChat(conversation);
+  const multiParty = !!conversation && isMultiParty(conversation);
 
   const { data: contact } = useContactByAddress(
     isGroup ? undefined : conversation?.address,
@@ -191,9 +193,11 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
   // If the role is not admin, then do not show internal messages.
   const mostRecent = messages?.find((m) => isAdmin || !isInternal(m));
 
-  // Group previews are prefixed with the sender name, as in WhatsApp Web.
+  // Attribution, by the same rule the chat bubbles use: a preview says who
+  // spoke only where more than one party could have. In contact space that is
+  // a name (here, as in WhatsApp Web); a member gets theirs below.
   const previewSenderAddress =
-    isGroup &&
+    multiParty &&
     mostRecent &&
     isIncoming(mostRecent, ownAgentId, teamChat) &&
     mostRecent.sender_address
@@ -225,6 +229,17 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
           timestamp: draft!.timestamp,
           status: {},
         } as unknown as MessageRow);
+
+  // The member half of the same rule: whoever answered on our side, unless it
+  // was me — and on the incoming side only where the room has more than one
+  // party to attribute between. A 1:1 with an AI needs no label; its every
+  // message is the agent's.
+  const previewAgentId =
+    preview?.agent_id &&
+    preview.agent_id !== ownAgentId &&
+    (multiParty || !isIncoming(preview, ownAgentId, teamChat))
+      ? preview.agent_id
+      : undefined;
 
   const unread = (() => {
     let count = 0;
@@ -376,11 +391,9 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
                 {preview &&
                   isOutgoing(preview, ownAgentId, teamChat) &&
                   statusIcon(preview.status)}
-                {preview?.agent_id && preview.agent_id !== agent?.id && (
+                {previewAgentId && (
                   <div className="text-primary text-[14px] mr-1 shrink-0">
-                    {agents?.find((a) => a.id === preview.agent_id)?.name ||
-                      "?"}
-                    :
+                    {agents?.find((a) => a.id === previewAgentId)?.name || "?"}:
                   </div>
                 )}
                 {/* Group sender prefix, as in WhatsApp Web */}
