@@ -12,6 +12,7 @@ import {
   type OutgoingStatus,
   messageDirection,
 } from "@/supabase/client";
+import useBoundStore from "@/stores/useBoundStore";
 dayjs.extend(duration);
 
 export default function AudioMessage({
@@ -31,6 +32,10 @@ export default function AudioMessage({
   ) {
     throw new Error(`Message with id ${message.id} is not a BaseMessage.`);
   }
+
+  // Which side the bubble lands on is viewer-relative; see messageDirection.
+  const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
+  const direction = messageDirection(message, ownAgentId);
 
   const content = message.content;
   if (content.type !== "file" || content.kind !== "audio") {
@@ -73,7 +78,7 @@ export default function AudioMessage({
       <div
         className={
           "py-[3px] flex items-center" +
-          (messageDirection(message) === "incoming"
+          (direction === "incoming"
             ? " pl-[11px] pr-[7px]"
             : " pr-[11px] pl-[7px]")
         }
@@ -82,9 +87,7 @@ export default function AudioMessage({
         <div
           className={
             "grow flex items-center pb-[5px]" +
-            (messageDirection(message) === "incoming"
-              ? " mr-[11px]"
-              : " ml-[11px]")
+            (direction === "incoming" ? " mr-[11px]" : " ml-[11px]")
           }
         >
           {/* Load/Play/Pause button */}
@@ -210,13 +213,11 @@ export default function AudioMessage({
             <div
               className={
                 "text-[11px] text-muted-foreground absolute -bottom-[22px] flex items-center" +
-                (messageDirection(message) === "incoming"
-                  ? " right-0"
-                  : " -right-[7px]")
+                (direction === "incoming" ? " right-0" : " -right-[7px]")
               }
             >
               {dayjs(message.timestamp).format("HH:mm")}
-              {messageDirection(message) === "outgoing" && (
+              {direction === "outgoing" && (
                 <StatusIcon {...(message.status as OutgoingStatus)} />
               )}
             </div>
@@ -227,16 +228,13 @@ export default function AudioMessage({
         <div
           className={
             "relative" +
-            (messageDirection(message) === "incoming"
-              ? " order-last"
-              : " order-first")
+            (direction === "incoming" ? " order-last" : " order-first")
           }
         >
           <Avatar
             // TODO: use agent name and pic - cabra 16/01/2025
             fallback={nameInitials(
-              (messageDirection(message) === "incoming" ? convName : orgName) ||
-                "?",
+              (direction === "incoming" ? convName : orgName) || "?",
             )}
             size={55}
             className="bg-primary text-xl"
@@ -244,9 +242,7 @@ export default function AudioMessage({
           <svg
             className={
               "w-[19px] h-[26px] absolute -bottom-[2px]" +
-              (messageDirection(message) === "incoming"
-                ? " left-0"
-                : " right-0")
+              (direction === "incoming" ? " left-0" : " right-0")
             }
           >
             {/* TODO: out message mic background should match the green background of the message - cabra 05/06/2024 */}

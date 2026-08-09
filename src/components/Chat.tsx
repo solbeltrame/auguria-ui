@@ -9,6 +9,7 @@ import Message from "./Message/Message";
 import {
   type MessageRow,
   isInternal,
+  isMultiParty,
   messageDirection,
 } from "@/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -54,13 +55,16 @@ export default function Chat() {
   const { data: org } = useCurrentOrganization();
   const orgName = org?.name || "?";
 
-  const convName = useBoundStore(
-    (store) =>
-      store.chat.conversations.get(store.ui.activeConvId || "")?.name || "?",
+  const conversation = useBoundStore((store) =>
+    store.chat.conversations.get(store.ui.activeConvId || ""),
   );
+  const convName = conversation?.name || "?";
+  const multiParty = !!conversation && isMultiParty(conversation);
 
   const { data: agent } = useCurrentAgent();
-  const activeAgentId = agent?.id;
+  // From the store, not the query, so this and Message agree on the viewer
+  // exactly — they decide the same message's side, one render apart otherwise.
+  const activeAgentId = useBoundStore((store) => store.chat.ownAgentId);
   const isAdmin = ["admin", "owner"].includes(agent?.role || "");
 
   const scroller = useRef<HTMLDivElement>(null);
@@ -112,14 +116,29 @@ export default function Chat() {
 
   const colorMap = assignAgentColors(getUniqueAgentIds(messages));
 
+  // Who said this — shown only when it is a question.
+  //
+  // Outgoing side: a shared inbox has many possible senders, so a colleague's
+  // (or the AI's) reply is attributed. Mine never is: my own bubbles are the
+  // ones on the right that need no explaining.
+  //
+  // Incoming side: only where the peer's side can hold more than one party.
+  // Contacts have no agent row and so no avatar — they get a sender name from
+  // Message instead; this is the attribution for members, which is who the
+  // other side is made of in a `local` room or a mirrored Slack channel.
   function getAgentAvatar(
-    agentId: string | null,
+    message: MessageRow,
   ): { agentId: string; color: string } | undefined {
-    // Incoming messages don't have an agent id
-    if (!agentId) return undefined;
+    const agentId = message.agent_id;
 
-    // Avatar is not needed for the user
-    if (agentId === activeAgentId) return undefined;
+    if (!agentId || agentId === activeAgentId) return undefined;
+
+    if (
+      messageDirection(message, activeAgentId) === "incoming" &&
+      !multiParty
+    ) {
+      return undefined;
+    }
 
     return { agentId, color: colorMap.get(agentId)! };
   }
@@ -139,14 +158,16 @@ export default function Chat() {
         env.last = true;
       } else if (
         prevMsg.message.agent_id === env.message.agent_id &&
-        messageDirection(prevMsg.message) === messageDirection(env.message) &&
+        messageDirection(prevMsg.message, activeAgentId) ===
+          messageDirection(env.message, activeAgentId) &&
         prevMsg.message.sender_address === env.message.sender_address
       ) {
         prevMsg.last = false;
         env.last = true;
       } else if (
         prevMsg.message.agent_id !== env.message.agent_id ||
-        messageDirection(prevMsg.message) !== messageDirection(env.message) ||
+        messageDirection(prevMsg.message, activeAgentId) !==
+          messageDirection(env.message, activeAgentId) ||
         prevMsg.message.sender_address !== env.message.sender_address
       ) {
         prevMsg.last = true;
@@ -284,7 +305,8 @@ export default function Chat() {
                 last={envOrSep.last}
                 orgName={orgName}
                 convName={convName}
-                avatar={getAgentAvatar(envOrSep.message.agent_id)}
+                multiParty={multiParty}
+                avatar={getAgentAvatar(envOrSep.message)}
               />
             ) : (
               <Separator key={index} text={envOrSep.text} />

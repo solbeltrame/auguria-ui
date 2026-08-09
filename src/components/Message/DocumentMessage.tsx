@@ -6,6 +6,7 @@ import {
   type OutgoingStatus,
   messageDirection,
 } from "@/supabase/client";
+import useBoundStore from "@/stores/useBoundStore";
 import dayjs from "dayjs";
 import { Markdown } from "./Message";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -75,6 +76,10 @@ export default function DocumentMessage(message: MessageRow) {
   ) {
     throw new Error(`Message with id ${message.id} is not a BaseMessage.`);
   }
+
+  // Which side the bubble lands on is viewer-relative; see messageDirection.
+  const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
+  const direction = messageDirection(message, ownAgentId);
 
   const content = message.content;
 
@@ -172,10 +177,7 @@ export default function DocumentMessage(message: MessageRow) {
       {/* Caption */}
       {content.text && (
         <div className="pl-[6px] pt-[6px] pb-[5px] pr-[4px]">
-          <Markdown
-            content={content.text || ""}
-            direction={messageDirection(message)}
-          />
+          <Markdown content={content.text || ""} direction={direction} />
         </div>
       )}
 
@@ -200,7 +202,7 @@ export default function DocumentMessage(message: MessageRow) {
                     ? description.text || ""
                     : "";
                 })()}
-                direction={messageDirection(message)}
+                direction={direction}
               />
             )}
             <div
@@ -217,7 +219,7 @@ export default function DocumentMessage(message: MessageRow) {
       {/* Timestamp */}
       <div className="text-[11px] text-muted-foreground absolute bottom-[0px] right-[7px] flex items-center">
         {dayjs(message.timestamp).format("HH:mm")}
-        {messageDirection(message) === "outgoing" && (
+        {direction === "outgoing" && (
           <StatusIcon {...(message.status as OutgoingStatus)} />
         )}
       </div>

@@ -126,7 +126,7 @@ export default function ChatFooter() {
     }
 
     for (const msg of msgs) {
-      if (isIncoming(msg)) {
+      if (isIncoming(msg, store.chat.ownAgentId)) {
         return msg;
       }
     }

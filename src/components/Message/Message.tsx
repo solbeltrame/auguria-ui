@@ -18,6 +18,7 @@ import { prettyPrintJson } from "pretty-print-json";
 import { useTranslation } from "@/hooks/useTranslation";
 import AvatarComponent from "@/components/Avatar";
 import { useAgent } from "@/queries/useAgents";
+import useBoundStore from "@/stores/useBoundStore";
 import { useContactByAddress } from "@/queries/useContacts";
 import { formatPhoneNumber } from "@/utils/FormatUtils";
 import { AVATAR_BG_COLORS, AVATAR_TEXT_COLORS } from "@/utils/colors";
@@ -398,20 +399,29 @@ type UIMessage = {
   convName?: string;
   avatar?: { agentId: string; color: string };
   internal?: boolean;
-  // Sender label for incoming messages in group conversations (whatsapp-web).
+  // Whether the conversation can hold more than one party on the peer's side
+  // (see isMultiParty) — what decides if an incoming message is attributed.
+  multiParty?: boolean;
+  // Sender label for incoming messages from a contact, when there is more than
+  // one contact it could be.
   senderName?: string;
 };
 
 export default function Message(props: UIMessage & { message: MessageRow }) {
   const { translate: t } = useTranslation();
 
-  // Group conversations: incoming rows carry the actual sender in
-  // sender_address, while conversation_address names the group itself — in a
-  // direct chat both are the peer. Resolve a friendly label to attribute each
-  // message.
+  const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
+  const direction = messageDirection(props.message, ownAgentId);
+
+  // Attribution in contact space. Where the peer's side can hold more than one
+  // party, the incoming row carries its actual sender in sender_address while
+  // conversation_address names the container — so resolve a friendly label for
+  // it. Members are attributed by avatar instead (Chat.getAgentAvatar); this is
+  // for the senders that have no agent row.
   const isGroupIncoming =
-    !!props.message.sender_address &&
-    props.message.sender_address !== props.message.conversation_address;
+    !!props.multiParty &&
+    direction === "incoming" &&
+    !!props.message.sender_address;
   const { data: senderContact } = useContactByAddress(
     isGroupIncoming ? props.message.sender_address : undefined,
     props.message.service,
@@ -451,13 +461,9 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         header={headerText}
         body={props.message.content.text}
         type="markdown"
-        direction={messageDirection(props.message)}
+        direction={direction}
         timestamp={props.message.timestamp}
-        status={
-          messageDirection(props.message) === "outgoing"
-            ? props.message.status
-            : undefined
-        }
+        status={direction === "outgoing" ? props.message.status : undefined}
         fixedWidth={fixedWidth}
       />
     );
@@ -471,13 +477,9 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         header={headerText}
         body={props.message.content.text}
         type="markdown"
-        direction={messageDirection(props.message)}
+        direction={direction}
         timestamp={props.message.timestamp}
-        status={
-          messageDirection(props.message) === "outgoing"
-            ? props.message.status
-            : undefined
-        }
+        status={direction === "outgoing" ? props.message.status : undefined}
         fixedWidth={fixedWidth}
       />
     );
@@ -501,13 +503,9 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
             : "")
         }
         type="markdown"
-        direction={messageDirection(props.message)}
+        direction={direction}
         timestamp={props.message.timestamp}
-        status={
-          messageDirection(props.message) === "outgoing"
-            ? props.message.status
-            : undefined
-        }
+        status={direction === "outgoing" ? props.message.status : undefined}
         fixedWidth={fixedWidth}
       />
     );
@@ -518,13 +516,9 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         header={headerText}
         body={props.message.content.data}
         type="json"
-        direction={messageDirection(props.message)}
+        direction={direction}
         timestamp={props.message.timestamp}
-        status={
-          messageDirection(props.message) === "outgoing"
-            ? props.message.status
-            : undefined
-        }
+        status={direction === "outgoing" ? props.message.status : undefined}
         fixedWidth={fixedWidth}
       />
     );
@@ -560,18 +554,17 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
 
   return (
     <>
-      {messageDirection(props.message) === "incoming" && (
+      {direction === "incoming" && (
         <InMessage {...{ ...props, text, fixedWidth, senderName }}>
           {content}
         </InMessage>
       )}
-      {(messageDirection(props.message) === "outgoing" ||
-        messageDirection(props.message) === "internal") && (
+      {(direction === "outgoing" || direction === "internal") && (
         <OutMessage
           {...{
             ...props,
             text,
-            internal: messageDirection(props.message) === "internal",
+            internal: direction === "internal",
             fixedWidth,
           }}
         >

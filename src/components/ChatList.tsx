@@ -35,6 +35,7 @@ const ChatList = () => {
   const membershipExtras = useBoundStore(
     (state) => state.chat.membershipExtras,
   );
+  const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
   const filterName = useBoundStore((state) => state.ui.filter);
   const setFilterName = useBoundStore((state) => state.ui.setFilter);
   const searchPattern = useBoundStore((state) => state.ui.searchPattern);
@@ -61,6 +62,7 @@ const ChatList = () => {
           a.conv,
           a.mostRecentMsg,
           membershipExtras.get(a.convId),
+          ownAgentId,
         ) &&
         !!a.mostRecentMsg,
     );

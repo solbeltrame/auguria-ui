@@ -33,11 +33,14 @@ export const filters: {
     conv: ConversationRow,
     msg?: MessageRow,
     extra?: ConversationAgentExtra,
+    // Pending is "someone else spoke last", and in a peerless conversation
+    // "someone else" can only be answered relative to the viewer.
+    ownAgentId?: string | null,
   ) => boolean;
 } = {
   todas: (_conv, msg, extra) => !isArchived(extra, msg),
-  pendientes: (_conv, msg, extra) =>
-    !isArchived(extra, msg) && !!msg && isIncoming(msg),
+  pendientes: (_conv, msg, extra, ownAgentId) =>
+    !isArchived(extra, msg) && !!msg && isIncoming(msg, ownAgentId),
   "24h": (_conv, msg, extra) =>
     !isArchived(extra, msg) &&
     dayjs(msg?.timestamp || 0).isAfter(dayjs().subtract(1, "day")),
