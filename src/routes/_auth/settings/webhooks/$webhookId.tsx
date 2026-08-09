@@ -24,7 +24,7 @@ function EditWebhook() {
   const { webhookId } = Route.useParams();
   const { data: webhook } = useWebhook(webhookId);
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
+  const isOwner = currentAgent?.role === "owner";
   const updateWebhook = useUpdateWebhook();
   const deleteWebhook = useDeleteWebhook();
 
@@ -48,8 +48,8 @@ function EditWebhook() {
                 navigate({ to: "..", hash: (prevHash) => prevHash! }),
             })
           }
-          deleteDisabled={!isAdmin}
-          deleteDisabledReason={t("Requiere permisos de administrador")}
+          deleteDisabled={!isOwner}
+          deleteDisabledReason={t("Requiere permisos de propietario")}
           deleteLoading={deleteWebhook.isPending}
         />
 
@@ -118,10 +118,10 @@ function EditWebhook() {
           <Button
             form="webhook-form"
             type="submit"
-            disabled={!isAdmin}
+            disabled={!isOwner}
             invalid={!isValid || !isDirty}
             loading={updateWebhook.isPending}
-            disabledReason={t("Requiere permisos de administrador")}
+            disabledReason={t("Requiere permisos de propietario")}
             className="primary"
           >
             {t("Actualizar")}

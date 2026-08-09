@@ -20,7 +20,7 @@ export default function WhatsAppIntegration({
   const orgId = useBoundStore((state) => state.ui.activeOrgId);
   const [loading, setLoading] = useState(false);
   const { data: agent } = useCurrentAgent();
-  const isOwner = agent?.role === "owner";
+  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
   // The Facebook SDK loads asynchronously from connect.facebook.net, which is
   // commonly blocked by tracking protection / ad blockers. If it fails to load,
   // show the error up front instead of a button that cannot work.
@@ -44,12 +44,12 @@ export default function WhatsAppIntegration({
         <p className="text-destructive font-medium">{sdkErrorMessage}</p>
       )}
       <Button
-        disabled={!orgId || !isOwner || sdkFailed}
+        disabled={!orgId || !isAdmin || sdkFailed}
         disabledReason={
           sdkFailed
             ? sdkErrorMessage
-            : !isOwner
-              ? t("Requiere permisos de propietario")
+            : !isAdmin
+              ? t("Requiere permisos de administrador")
               : undefined
         }
         loading={loading}

@@ -28,7 +28,7 @@ function MediaPreprocessingSettings() {
   const { data: agent } = useCurrentAgent();
   const updateOrg = useUpdateCurrentOrganization();
 
-  const isOwner = agent?.role === "owner";
+  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
 
   const normalizedOrg = useMemo(() => {
     if (!org) return undefined;
@@ -74,7 +74,7 @@ function MediaPreprocessingSettings() {
                   onCheckedChange={(checked) =>
                     field.onChange(checked ? "active" : "inactive")
                   }
-                  disabled={!isOwner}
+                  disabled={!isAdmin}
                   className="mt-[4px]"
                 />
               </label>
@@ -89,7 +89,7 @@ function MediaPreprocessingSettings() {
               { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
               { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
             ]}
-            disabled={!isOwner}
+            disabled={!isAdmin}
           />
 
           <label>
@@ -98,7 +98,7 @@ function MediaPreprocessingSettings() {
               type="password"
               className="text"
               placeholder="sk-..."
-              disabled={!isOwner}
+              disabled={!isAdmin}
               {...register("extra.media_preprocessing.api_key")}
             />
           </label>
@@ -124,7 +124,7 @@ function MediaPreprocessingSettings() {
               type="text"
               className="text"
               placeholder="Español"
-              disabled={!isOwner}
+              disabled={!isAdmin}
               {...register("extra.media_preprocessing.language")}
             />
           </label>
@@ -134,7 +134,7 @@ function MediaPreprocessingSettings() {
             name="extra.media_preprocessing.extra_prompt"
             label={t("Instrucciones adicionales")}
             placeholder={t("Instrucciones adicionales para el modelo...")}
-            disabled={!isOwner}
+            disabled={!isAdmin}
           />
         </form>
       </SectionBody>
@@ -143,10 +143,10 @@ function MediaPreprocessingSettings() {
         <Button
           form="media-preprocessing-form"
           type="submit"
-          disabled={!isOwner}
+          disabled={!isAdmin}
           invalid={!isValid || !isDirty}
           loading={updateOrg.isPending}
-          disabledReason={t("Requiere permisos de propietario")}
+          disabledReason={t("Requiere permisos de administrador")}
           className="primary"
         >
           {t("Actualizar")}

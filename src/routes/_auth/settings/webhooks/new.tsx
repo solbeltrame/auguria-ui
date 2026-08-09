@@ -18,7 +18,7 @@ function AddWebhook() {
   const navigate = useNavigate();
   const createWebhook = useCreateWebhook();
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
+  const isOwner = currentAgent?.role === "owner";
 
   const {
     register,
@@ -49,7 +49,7 @@ function AddWebhook() {
             }),
           )}
         >
-          <fieldset disabled={!isAdmin} className="contents">
+          <fieldset disabled={!isOwner} className="contents">
             <p>
               {t(
                 "Los webhooks notifican a tu servidor cuando ocurren eventos. Selecciona la tabla y operaciones que quieres monitorear.",
@@ -112,10 +112,10 @@ function AddWebhook() {
         <Button
           form="create-webhook-form"
           type="submit"
-          disabled={!isAdmin}
+          disabled={!isOwner}
           invalid={!isValid || !isDirty}
           loading={createWebhook.isPending}
-          disabledReason={t("Requiere permisos de administrador")}
+          disabledReason={t("Requiere permisos de propietario")}
           className="primary"
         >
           {t("Crear")}

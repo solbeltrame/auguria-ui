@@ -28,7 +28,12 @@ function WhatsAppWebDetails() {
 
   if (!integration) return;
 
-  const isOwner = agent?.role === "owner";
+  // Admin+, or the member whose own number this is — requireRolesOrOwnAddress
+  // in whatsapp-web-management. A personal address carries its member's
+  // agent_id; the org's number carries none.
+  const canManage =
+    ["admin", "owner"].includes(agent?.role || "") ||
+    (!!integration.agent_id && integration.agent_id === agent?.id);
   const isConnected = integration.status === "connected";
 
   // Durable row status is the source of truth; live health refines the label.
@@ -93,8 +98,8 @@ function WhatsAppWebDetails() {
                   hash: (prevHash) => prevHash!,
                 })
               }
-              disabled={!isOwner}
-              disabledReason={t("Requiere permisos de propietario")}
+              disabled={!canManage}
+              disabledReason={t("Requiere permisos de administrador")}
             >
               {t("Volver a vincular")}
             </Button>
@@ -103,8 +108,8 @@ function WhatsAppWebDetails() {
               type="button"
               className="primary bg-destructive text-primary-foreground hover:bg-destructive/80 px-4 py-2 rounded-full font-medium w-fit text-[14px]"
               onClick={handleDisconnect}
-              disabled={!isOwner}
-              disabledReason={t("Requiere permisos de propietario")}
+              disabled={!canManage}
+              disabledReason={t("Requiere permisos de administrador")}
               loading={disconnect.isPending}
             >
               {t("Desconectar")}

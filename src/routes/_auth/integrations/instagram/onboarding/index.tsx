@@ -19,7 +19,7 @@ function OnboardingIndex() {
   const navigate = useNavigate();
   const { data: tokens } = useOnboardingTokens("instagram");
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.role === "owner";
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
 
   function getStatus(token: {
     status: string;
@@ -50,8 +50,8 @@ function OnboardingIndex() {
               hash: (prevHash) => prevHash!,
             })
           }
-          disabled={!isOwner}
-          disabledReason={t("Requiere permisos de propietario")}
+          disabled={!isAdmin}
+          disabledReason={t("Requiere permisos de administrador")}
         />
         {tokens?.map((token) => (
           <SectionItem

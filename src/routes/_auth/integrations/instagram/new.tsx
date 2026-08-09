@@ -21,7 +21,7 @@ export const IG_INAPP_REDIRECT_PATH = "/oauth/instagram";
 function InstagramNew() {
   const { translate: t } = useTranslation();
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.role === "owner";
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -80,8 +80,8 @@ function InstagramNew() {
       <SectionFooter>
         <Button
           loading={loading}
-          disabled={!isOwner}
-          disabledReason={t("Requiere permisos de propietario")}
+          disabled={!isAdmin}
+          disabledReason={t("Requiere permisos de administrador")}
           className="primary bg-[#E1306C] hover:bg-[#E1306C]/90 text-white w-full"
           onClick={connect}
         >

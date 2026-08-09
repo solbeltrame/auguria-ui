@@ -24,7 +24,7 @@ function WhatsAppWebNew() {
   const { translate: t } = useTranslation();
   const navigate = useNavigate();
   const { data: agent } = useCurrentAgent();
-  const isOwner = agent?.role === "owner";
+  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
 
   const [method, setMethod] = useState<Method>("qr");
   const [phone, setPhone] = useState("");
@@ -191,10 +191,10 @@ function WhatsAppWebNew() {
             type="button"
             className="primary bg-[#00ADD8] hover:bg-[#00ADD8]/90 text-white w-full"
             disabled={
-              !isOwner || (method === "code" && !isValidPhoneNumber(phone))
+              !isAdmin || (method === "code" && !isValidPhoneNumber(phone))
             }
             disabledReason={
-              !isOwner ? t("Requiere permisos de propietario") : undefined
+              !isAdmin ? t("Requiere permisos de administrador") : undefined
             }
             loading={start.isPending}
             onClick={beginPairing}

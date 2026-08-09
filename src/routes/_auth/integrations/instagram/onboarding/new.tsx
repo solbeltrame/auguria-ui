@@ -25,7 +25,7 @@ function NewOnboardingToken() {
   const navigate = useNavigate();
   const createToken = useCreateOnboardingToken("instagram");
   const { data: currentAgent } = useCurrentAgent();
-  const isOwner = currentAgent?.role === "owner";
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
 
   const { control, register, handleSubmit } = useForm<FormValues>({
     defaultValues: {
@@ -58,7 +58,7 @@ function NewOnboardingToken() {
             ),
           )}
         >
-          <fieldset disabled={!isOwner} className="contents">
+          <fieldset disabled={!isAdmin} className="contents">
             <p className="text-muted-foreground text-[14px]">
               {t(
                 "Generá un enlace para que un tercero conecte su cuenta de Instagram a tu organización. No necesita tener cuenta en Open BSP ni ser miembro de tu organización.",
@@ -95,9 +95,9 @@ function NewOnboardingToken() {
         <Button
           form="create-onboarding-token-form"
           type="submit"
-          disabled={!isOwner}
+          disabled={!isAdmin}
           loading={createToken.isPending}
-          disabledReason={t("Requiere permisos de propietario")}
+          disabledReason={t("Requiere permisos de administrador")}
           className="primary"
         >
           {t("Generar")}

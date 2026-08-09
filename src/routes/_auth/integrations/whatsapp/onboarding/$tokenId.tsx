@@ -23,7 +23,7 @@ function OnboardingTokenDetail() {
   const { data: tokens } = useOnboardingTokens("whatsapp");
   const { data: currentAgent } = useCurrentAgent();
   const deleteToken = useDeleteOnboardingToken("whatsapp");
-  const isOwner = currentAgent?.role === "owner";
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
   const [copied, setCopied] = useState(false);
 
   const token = tokens?.find((t) => t.id === tokenId);
@@ -62,8 +62,8 @@ function OnboardingTokenDetail() {
                 navigate({ to: "..", hash: (prevHash) => prevHash! }),
             })
           }
-          deleteDisabled={!isOwner}
-          deleteDisabledReason={t("Requiere permisos de propietario")}
+          deleteDisabled={!isAdmin}
+          deleteDisabledReason={t("Requiere permisos de administrador")}
           deleteLoading={deleteToken.isPending}
         />
 

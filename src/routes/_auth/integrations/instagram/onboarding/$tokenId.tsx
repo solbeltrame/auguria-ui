@@ -23,7 +23,7 @@ function OnboardingTokenDetail() {
   const { data: tokens } = useOnboardingTokens("instagram");
   const { data: currentAgent } = useCurrentAgent();
   const deleteToken = useDeleteOnboardingToken("instagram");
-  const isOwner = currentAgent?.role === "owner";
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
   const [copied, setCopied] = useState(false);
 
   const token = tokens?.find((tk) => tk.id === tokenId);
@@ -63,8 +63,8 @@ function OnboardingTokenDetail() {
                 navigate({ to: "..", hash: (prevHash) => prevHash! }),
             })
           }
-          deleteDisabled={!isOwner}
-          deleteDisabledReason={t("Requiere permisos de propietario")}
+          deleteDisabled={!isAdmin}
+          deleteDisabledReason={t("Requiere permisos de administrador")}
           deleteLoading={deleteToken.isPending}
         />
 

@@ -16,7 +16,7 @@ function ListWebhooks() {
   const navigate = useNavigate();
   const { data: webhooks } = useWebhooks();
   const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
+  const isOwner = currentAgent?.role === "owner";
 
   return (
     <>
@@ -36,8 +36,8 @@ function ListWebhooks() {
               hash: (prevHash) => prevHash!,
             })
           }
-          disabled={!isAdmin}
-          disabledReason={t("Requiere permisos de administrador")}
+          disabled={!isOwner}
+          disabledReason={t("Requiere permisos de propietario")}
         />
         {webhooks?.map((webhook) => (
           <SectionItem

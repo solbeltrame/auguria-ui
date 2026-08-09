@@ -33,6 +33,9 @@ function EditOrganization() {
   const navigate = useNavigate();
   const { data: org } = useCurrentOrganization();
   const { data: agent } = useCurrentAgent();
+  // Admins run the organization — the whole row, name included. Deleting it is
+  // the owner's, like every other way of taking control.
+  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
   const isOwner = agent?.role === "owner";
   const setActiveOrg = useBoundStore((state) => state.ui.setActiveOrg);
   const updateOrg = useUpdateCurrentOrganization();
@@ -84,7 +87,7 @@ function EditOrganization() {
             <input
               className="text"
               placeholder={t("Nombre de la organización")}
-              disabled={!isOwner}
+              disabled={!isAdmin}
               {...register("name", { required: true })}
             />
           </label>
@@ -97,7 +100,7 @@ function EditOrganization() {
               { value: "internal", label: t("Solo en la UI") },
               { value: "outgoing", label: t("Visible desde WhatsApp") },
             ]}
-            disabled={!isOwner}
+            disabled={!isAdmin}
           />
         </form>
       </SectionBody>
@@ -106,10 +109,10 @@ function EditOrganization() {
         <Button
           form="org-form"
           type="submit"
-          disabled={!isOwner}
+          disabled={!isAdmin}
           invalid={!isValid || !isDirty}
           loading={updateOrg.isPending}
-          disabledReason={t("Requiere permisos de propietario")}
+          disabledReason={t("Requiere permisos de administrador")}
           className="primary"
         >
           {t("Actualizar")}
