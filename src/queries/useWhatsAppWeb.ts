@@ -4,8 +4,9 @@ import useBoundStore from "@/stores/useBoundStore";
 import { queryKeys } from "./queryKeys";
 
 // Backend contract: whatsapp-web-management edge function (whatsmeow bridge).
-// All routes take the user JWT (supabase.functions.invoke attaches it) and are
-// owner-only except channel health (any member).
+// All routes take the user JWT (supabase.functions.invoke attaches it). Pairing
+// and disconnecting the ORGANIZATION'S number are admin+; a member does both
+// for a personal one — the address row whose agent_id is theirs.
 const FN = "whatsapp-web-management";
 
 export type WebSessionStatus = "pending" | "paired" | "error";
@@ -43,12 +44,18 @@ async function invoke<T>(
   return data;
 }
 
-// 3.1 Start pairing — QR (no phone) or code (with phone). Owner only.
+// 3.1 Start pairing — QR (no phone) or code (with phone). `agent_id` makes the
+// number personal; absent pairs the organization's. The bridge stores it in the
+// session mapping and echoes it back on every connected event, so a reconnect
+// cannot quietly turn a personal number into a shared one.
 export function useStartWhatsAppWebSession() {
   const organization_id = useBoundStore((state) => state.ui.activeOrgId);
 
   return useMutation({
-    mutationFn: async (payload: { phone_number?: string }) => {
+    mutationFn: async (payload: {
+      phone_number?: string;
+      agent_id?: string;
+    }) => {
       if (!organization_id) throw new Error("No active organization");
 
       return invoke<StartSessionResult>("sessions", "POST", {

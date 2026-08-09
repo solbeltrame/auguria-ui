@@ -8,6 +8,7 @@ import { WhatsAppOutlined } from "@ant-design/icons";
 import { Link, Plus } from "lucide-react";
 import type { JSX } from "react";
 import { formatPhoneNumber } from "@/utils/FormatUtils";
+import ConnectionOwner from "@/components/ConnectionOwner";
 
 export const Route = createFileRoute("/_auth/integrations/whatsapp/")({
   component: WhatsAppIndex,
@@ -76,7 +77,10 @@ function WhatsAppIndex() {
                   ?.phone_number || integration.address,
               )}
               description={
-                statusLabels[integration.status] || integration.status
+                <>
+                  {statusLabels[integration.status] || integration.status}
+                  <ConnectionOwner agentId={integration.agent_id} />
+                </>
               }
               onClick={() =>
                 navigate({

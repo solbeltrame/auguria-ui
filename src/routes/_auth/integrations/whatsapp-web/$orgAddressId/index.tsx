@@ -28,9 +28,8 @@ function WhatsAppWebDetails() {
 
   if (!integration) return;
 
-  // Admin+, or the member whose own number this is — requireRolesOrOwnAddress
-  // in whatsapp-web-management. A personal address carries its member's
-  // agent_id; the org's number carries none.
+  // Admin+, or the member whose own number this is: a user-scoped address
+  // carries their agent_id, the organization's carries none.
   const canManage =
     ["admin", "owner"].includes(agent?.role || "") ||
     (!!integration.agent_id && integration.agent_id === agent?.id);

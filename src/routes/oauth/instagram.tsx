@@ -2,7 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useInstagramSignup } from "@/queries/useInstagramSignup";
-import { IG_INAPP_REDIRECT_PATH } from "@/routes/_auth/integrations/instagram/new";
+import {
+  IG_INAPP_REDIRECT_PATH,
+  IG_OAUTH_AGENT_KEY,
+} from "@/routes/_auth/integrations/instagram/new";
 
 // Standalone (outside the `_auth` layout) so the return page is a bare
 // "connecting" screen instead of the whole app shell.
@@ -33,6 +36,12 @@ function InstagramOAuthCallback() {
     const expected = localStorage.getItem("ig_oauth_state");
     localStorage.removeItem("ig_oauth_state");
 
+    // Whose account this is, chosen before the redirect. Absent is the
+    // organization's — including on the public onboarding link, where the
+    // person connecting is not a member at all.
+    const agent_id = localStorage.getItem(IG_OAUTH_AGENT_KEY) ?? undefined;
+    localStorage.removeItem(IG_OAUTH_AGENT_KEY);
+
     // User canceled/denied: quietly return to the connect screen.
     if (error === "access_denied") {
       void navigate({ to: "/integrations/instagram/new", hash: "" });
@@ -46,7 +55,7 @@ function InstagramOAuthCallback() {
 
     const redirect_uri = `${window.location.origin}${IG_INAPP_REDIRECT_PATH}`;
     signup(
-      { code, redirect_uri },
+      { code, redirect_uri, agent_id },
       {
         onSuccess: (data) =>
           navigate({

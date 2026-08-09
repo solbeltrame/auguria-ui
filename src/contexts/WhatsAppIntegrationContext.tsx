@@ -6,6 +6,8 @@ const FB_API_VERSION = "v24.0";
 export type SignupPayload = {
   code: string;
   application_id?: string;
+  /** Connects the number as this member's own; absent is the organization's. */
+  agent_id?: string;
   organization_id?: string;
   phone_number_id?: string;
   waba_id?: string;
@@ -18,6 +20,7 @@ export type SignupPayload = {
 export type SignupOptions = {
   callback_url?: string;
   verify_token?: string;
+  agent_id?: string;
 };
 
 // Successful flow data
@@ -207,6 +210,7 @@ export function WhatsAppIntegrationProvider({
             // Construct payload according to SignupPayload type
             const payload: SignupPayload = {
               code,
+              agent_id: options?.agent_id,
               application_id: import.meta.env.VITE_META_APP_ID,
               phone_number_id: sessionInfo.phone_number_id,
               waba_id: sessionInfo.waba_id,

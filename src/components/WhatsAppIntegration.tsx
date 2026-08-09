@@ -6,21 +6,23 @@ import {
 import useBoundStore from "@/stores/useBoundStore";
 import Button from "@/components/Button";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useCurrentAgent } from "@/queries/useAgents";
 
 export default function WhatsAppIntegration({
   onSuccess,
   signupOptions,
+  // Whether the caller may connect at the scope they picked; see
+  // useConnectionScope. Defaults to allowed for the third-party onboarding
+  // flow, which has no member to ask about.
+  allowed = true,
 }: {
   onSuccess?: (phone_number_id: string) => void;
   signupOptions?: SignupOptions;
+  allowed?: boolean;
 }) {
   const { translate: t } = useTranslation();
   const context = useContext(WhatsAppIntegrationContext);
   const orgId = useBoundStore((state) => state.ui.activeOrgId);
   const [loading, setLoading] = useState(false);
-  const { data: agent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
   // The Facebook SDK loads asynchronously from connect.facebook.net, which is
   // commonly blocked by tracking protection / ad blockers. If it fails to load,
   // show the error up front instead of a button that cannot work.
@@ -44,11 +46,11 @@ export default function WhatsAppIntegration({
         <p className="text-destructive font-medium">{sdkErrorMessage}</p>
       )}
       <Button
-        disabled={!orgId || !isAdmin || sdkFailed}
+        disabled={!orgId || !allowed || sdkFailed}
         disabledReason={
           sdkFailed
             ? sdkErrorMessage
-            : !isAdmin
+            : !allowed
               ? t("Requiere permisos de administrador")
               : undefined
         }

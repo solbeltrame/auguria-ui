@@ -5,8 +5,9 @@ import SectionBody from "@/components/SectionBody";
 import SectionFooter from "@/components/SectionFooter";
 import Button from "@/components/Button";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useCurrentAgent } from "@/queries/useAgents";
 import { getInstagramAuthorizeUrl } from "@/queries/useInstagramSignup";
+import ScopeToggle from "@/components/ScopeToggle";
+import { useConnectionScope } from "@/hooks/useConnectionScope";
 
 export const Route = createFileRoute("/_auth/integrations/instagram/new")({
   component: InstagramNew,
@@ -18,10 +19,13 @@ export const Route = createFileRoute("/_auth/integrations/instagram/new")({
 // than the whole app shell.
 export const IG_INAPP_REDIRECT_PATH = "/oauth/instagram";
 
+// The scope is chosen here but spent on the way back, after a round trip
+// through Instagram — so it waits in localStorage beside the CSRF state.
+export const IG_OAUTH_AGENT_KEY = "ig_oauth_agent_id";
+
 function InstagramNew() {
   const { translate: t } = useTranslation();
-  const { data: currentAgent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
+  const { scope, setScope, isAdmin, agentId, allowed } = useConnectionScope();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -37,6 +41,12 @@ function InstagramNew() {
     const redirect_uri = `${window.location.origin}${IG_INAPP_REDIRECT_PATH}`;
     // Read back on return to validate against CSRF.
     localStorage.setItem("ig_oauth_state", state);
+
+    if (agentId) {
+      localStorage.setItem(IG_OAUTH_AGENT_KEY, agentId);
+    } else {
+      localStorage.removeItem(IG_OAUTH_AGENT_KEY);
+    }
 
     getInstagramAuthorizeUrl(redirect_uri, state)
       .then((url) => window.location.assign(url))
@@ -75,12 +85,17 @@ function InstagramNew() {
             </p>
           )}
         </div>
+
+        <label>
+          <div className="label">{t("Cuenta")}</div>
+          <ScopeToggle value={scope} onChange={setScope} isAdmin={isAdmin} />
+        </label>
       </SectionBody>
 
       <SectionFooter>
         <Button
           loading={loading}
-          disabled={!isAdmin}
+          disabled={!allowed}
           disabledReason={t("Requiere permisos de administrador")}
           className="primary bg-[#E1306C] hover:bg-[#E1306C]/90 text-white w-full"
           onClick={connect}

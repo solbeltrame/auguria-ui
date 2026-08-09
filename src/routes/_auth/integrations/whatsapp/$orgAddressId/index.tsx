@@ -29,7 +29,11 @@ function WhatsAppDetails() {
 
   if (!integration) return;
 
-  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
+  // Admin+, or the member whose own account this is: a user-scoped address
+  // carries their agent_id, the organization's carries none.
+  const canManage =
+    ["admin", "owner"].includes(agent?.role || "") ||
+    (!!integration.agent_id && integration.agent_id === agent?.id);
 
   const extra = integration.extra as
     | WhatsAppOrganizationAddressExtra
@@ -192,7 +196,7 @@ function WhatsAppDetails() {
               type="button"
               className="primary bg-destructive text-primary-foreground hover:bg-destructive/80 px-4 py-2 rounded-full font-medium transition-colors w-fit text-[14px]"
               onClick={handleDisconnect}
-              disabled={!isAdmin}
+              disabled={!canManage}
               disabledReason={t("Requiere permisos de administrador")}
               loading={disconnect.isPending}
             >

@@ -7,7 +7,8 @@ import SectionFooter from "@/components/SectionFooter";
 import Button from "@/components/Button";
 import Spinner from "@/components/Spinner";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useCurrentAgent } from "@/queries/useAgents";
+import ScopeToggle from "@/components/ScopeToggle";
+import { useConnectionScope } from "@/hooks/useConnectionScope";
 import {
   useStartWhatsAppWebSession,
   usePendingWhatsAppWebSession,
@@ -23,8 +24,7 @@ type Method = "qr" | "code";
 function WhatsAppWebNew() {
   const { translate: t } = useTranslation();
   const navigate = useNavigate();
-  const { data: agent } = useCurrentAgent();
-  const isAdmin = ["admin", "owner"].includes(agent?.role || "");
+  const { scope, setScope, isAdmin, agentId, allowed } = useConnectionScope();
 
   const [method, setMethod] = useState<Method>("qr");
   const [phone, setPhone] = useState("");
@@ -51,9 +51,14 @@ function WhatsAppWebNew() {
 
   const beginPairing = () => {
     setSessionId(null);
-    start.mutate(method === "code" ? { phone_number: phone } : {}, {
-      onSuccess: (data) => setSessionId(data.session_id),
-    });
+    start.mutate(
+      {
+        ...(method === "code" ? { phone_number: phone } : {}),
+        // Absent pairs the organization's number.
+        ...(agentId ? { agent_id: agentId } : {}),
+      },
+      { onSuccess: (data) => setSessionId(data.session_id) },
+    );
   };
 
   const reset = () => {
@@ -99,6 +104,18 @@ function WhatsAppWebNew() {
               )}
             </p>
           </div>
+
+          {/* Whose number this is - hidden once pairing is under way */}
+          {!pairedPending && !start.isPending && (
+            <label>
+              <div className="label">{t("Número")}</div>
+              <ScopeToggle
+                value={scope}
+                onChange={setScope}
+                isAdmin={isAdmin}
+              />
+            </label>
+          )}
 
           {/* Method toggle - hidden while a pairing session is in progress */}
           {!pairedPending && !start.isPending && (
@@ -191,10 +208,10 @@ function WhatsAppWebNew() {
             type="button"
             className="primary bg-[#00ADD8] hover:bg-[#00ADD8]/90 text-white w-full"
             disabled={
-              !isAdmin || (method === "code" && !isValidPhoneNumber(phone))
+              !allowed || (method === "code" && !isValidPhoneNumber(phone))
             }
             disabledReason={
-              !isAdmin ? t("Requiere permisos de administrador") : undefined
+              !allowed ? t("Requiere permisos de administrador") : undefined
             }
             loading={start.isPending}
             onClick={beginPairing}

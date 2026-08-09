@@ -5,6 +5,8 @@ import SectionBody from "@/components/SectionBody";
 import SectionFooter from "@/components/SectionFooter";
 import WhatsAppIntegration from "@/components/WhatsAppIntegration";
 import { useTranslation } from "@/hooks/useTranslation";
+import ScopeToggle from "@/components/ScopeToggle";
+import { useConnectionScope } from "@/hooks/useConnectionScope";
 
 export const Route = createFileRoute("/_auth/integrations/whatsapp/new")({
   component: WhatsAppNew,
@@ -13,6 +15,7 @@ export const Route = createFileRoute("/_auth/integrations/whatsapp/new")({
 function WhatsAppNew() {
   const { translate: t } = useTranslation();
   const navigate = useNavigate();
+  const { scope, setScope, isAdmin, agentId, allowed } = useConnectionScope();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [callbackUrl, setCallbackUrl] = useState("");
   const [verifyToken, setVerifyToken] = useState("");
@@ -54,6 +57,11 @@ function WhatsAppNew() {
               </li>
             </ul>
           </div>
+
+          <label>
+            <div className="label">{t("Número")}</div>
+            <ScopeToggle value={scope} onChange={setScope} isAdmin={isAdmin} />
+          </label>
 
           <button
             type="button"
@@ -107,9 +115,11 @@ function WhatsAppNew() {
       <SectionFooter>
         <WhatsAppIntegration
           onSuccess={handleSuccess}
+          allowed={allowed}
           signupOptions={{
             callback_url: callbackUrl.trim() || undefined,
             verify_token: verifyToken.trim() || undefined,
+            agent_id: agentId,
           }}
         />
       </SectionFooter>

@@ -8,6 +8,7 @@ import { InstagramOutlined } from "@ant-design/icons";
 import { Link, Plus } from "lucide-react";
 import type { JSX } from "react";
 import type { InstagramOrganizationAddressExtra } from "@/supabase/client";
+import ConnectionOwner from "@/components/ConnectionOwner";
 
 export const Route = createFileRoute("/_auth/integrations/instagram/")({
   component: InstagramIndex,
@@ -79,7 +80,10 @@ function InstagramIndex() {
                 }
                 title={title}
                 description={
-                  statusLabels[integration.status] || integration.status
+                  <>
+                    {statusLabels[integration.status] || integration.status}
+                    <ConnectionOwner agentId={integration.agent_id} />
+                  </>
                 }
                 onClick={() =>
                   navigate({

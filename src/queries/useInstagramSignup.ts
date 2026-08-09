@@ -34,6 +34,8 @@ export async function getInstagramAuthorizeUrl(
 export type InstagramSignupPayload = {
   code: string;
   redirect_uri: string;
+  /** Connects the account as this member's own; absent is the organization's. */
+  agent_id?: string;
 };
 
 export function useInstagramSignup() {

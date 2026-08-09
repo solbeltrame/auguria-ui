@@ -8,6 +8,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { Plus } from "lucide-react";
 import type { JSX } from "react";
 import { formatPhoneNumber } from "@/utils/FormatUtils";
+import ConnectionOwner from "@/components/ConnectionOwner";
 
 export const Route = createFileRoute("/_auth/integrations/whatsapp-web/")({
   component: WhatsAppWebIndex,
@@ -59,7 +60,10 @@ function WhatsAppWebIndex() {
               }
               title={formatPhoneNumber(integration.address)}
               description={
-                statusLabels[integration.status] || integration.status
+                <>
+                  {statusLabels[integration.status] || integration.status}
+                  <ConnectionOwner agentId={integration.agent_id} />
+                </>
               }
               onClick={() =>
                 navigate({
