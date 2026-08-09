@@ -13,6 +13,7 @@ import {
   type MessageRow,
   type TemplateMessage,
   isIncoming,
+  isTeamChat,
 } from "@/supabase/client";
 import { TickContext } from "@/contexts/useTick";
 import dayjs from "dayjs";
@@ -126,7 +127,13 @@ export default function ChatFooter() {
     }
 
     for (const msg of msgs) {
-      if (isIncoming(msg, store.chat.ownAgentId)) {
+      if (
+        isIncoming(
+          msg,
+          store.chat.ownAgentId,
+          isTeamChat(store.chat.conversations.get(msg.conversation_id)),
+        )
+      ) {
         return msg;
       }
     }

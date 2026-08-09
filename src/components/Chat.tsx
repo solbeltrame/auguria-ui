@@ -10,6 +10,7 @@ import {
   type MessageRow,
   isInternal,
   isMultiParty,
+  isTeamChat,
   messageDirection,
 } from "@/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -60,6 +61,7 @@ export default function Chat() {
   );
   const convName = conversation?.name || "?";
   const multiParty = !!conversation && isMultiParty(conversation);
+  const teamChat = isTeamChat(conversation);
 
   const { data: agent } = useCurrentAgent();
   // From the store, not the query, so this and Message agree on the viewer
@@ -134,7 +136,7 @@ export default function Chat() {
     if (!agentId || agentId === activeAgentId) return undefined;
 
     if (
-      messageDirection(message, activeAgentId) === "incoming" &&
+      messageDirection(message, activeAgentId, teamChat) === "incoming" &&
       !multiParty
     ) {
       return undefined;
@@ -158,16 +160,16 @@ export default function Chat() {
         env.last = true;
       } else if (
         prevMsg.message.agent_id === env.message.agent_id &&
-        messageDirection(prevMsg.message, activeAgentId) ===
-          messageDirection(env.message, activeAgentId) &&
+        messageDirection(prevMsg.message, activeAgentId, teamChat) ===
+          messageDirection(env.message, activeAgentId, teamChat) &&
         prevMsg.message.sender_address === env.message.sender_address
       ) {
         prevMsg.last = false;
         env.last = true;
       } else if (
         prevMsg.message.agent_id !== env.message.agent_id ||
-        messageDirection(prevMsg.message, activeAgentId) !==
-          messageDirection(env.message, activeAgentId) ||
+        messageDirection(prevMsg.message, activeAgentId, teamChat) !==
+          messageDirection(env.message, activeAgentId, teamChat) ||
         prevMsg.message.sender_address !== env.message.sender_address
       ) {
         prevMsg.last = true;

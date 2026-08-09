@@ -8,6 +8,7 @@ import {
   type MessageRow,
   type TemplateData,
   isIncoming,
+  isTeamChat,
 } from "@/supabase/client";
 
 export function isArchived(
@@ -39,8 +40,10 @@ export const filters: {
   ) => boolean;
 } = {
   todas: (_conv, msg, extra) => !isArchived(extra, msg),
-  pendientes: (_conv, msg, extra, ownAgentId) =>
-    !isArchived(extra, msg) && !!msg && isIncoming(msg, ownAgentId),
+  pendientes: (conv, msg, extra, ownAgentId) =>
+    !isArchived(extra, msg) &&
+    !!msg &&
+    isIncoming(msg, ownAgentId, isTeamChat(conv)),
   "24h": (_conv, msg, extra) =>
     !isArchived(extra, msg) &&
     dayjs(msg?.timestamp || 0).isAfter(dayjs().subtract(1, "day")),

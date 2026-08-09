@@ -3,6 +3,7 @@ import {
   type OutgoingStatus,
   type ToolInfo,
   type Direction,
+  isTeamChat,
   messageDirection,
 } from "@/supabase/client";
 import AudioMessage from "./AudioMessage";
@@ -411,7 +412,10 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
   const { translate: t } = useTranslation();
 
   const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
-  const direction = messageDirection(props.message, ownAgentId);
+  const teamChat = useBoundStore((state) =>
+    isTeamChat(state.chat.conversations.get(props.message.conversation_id)),
+  );
+  const direction = messageDirection(props.message, ownAgentId, teamChat);
 
   // Attribution in contact space. Where the peer's side can hold more than one
   // party, the incoming row carries its actual sender in sender_address while

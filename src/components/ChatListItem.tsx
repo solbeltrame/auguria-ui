@@ -10,6 +10,7 @@ import {
   isInternal,
   isIncoming,
   isOutgoing,
+  isTeamChat,
 } from "@/supabase/client";
 import ServiceIcon from "./ServiceIcon";
 import ItemActions from "./ItemActions";
@@ -167,6 +168,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
 
   const isGroup = conversation?.type === "group";
   const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
+  const teamChat = isTeamChat(conversation);
 
   const { data: contact } = useContactByAddress(
     isGroup ? undefined : conversation?.address,
@@ -193,7 +195,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
   const previewSenderAddress =
     isGroup &&
     mostRecent &&
-    isIncoming(mostRecent, ownAgentId) &&
+    isIncoming(mostRecent, ownAgentId, teamChat) &&
     mostRecent.sender_address
       ? mostRecent.sender_address
       : undefined;
@@ -235,7 +237,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
 
     // Messages are sorted by most recent first.
     for (const msg of messages) {
-      if (isIncoming(msg, ownAgentId) && !countBreak) {
+      if (isIncoming(msg, ownAgentId, teamChat) && !countBreak) {
         count += 1;
       } else if (
         isInternal(msg) &&
@@ -244,7 +246,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
       ) {
         notification = true;
       } else if (
-        isOutgoing(msg, ownAgentId) &&
+        isOutgoing(msg, ownAgentId, teamChat) &&
         agents
           ?.filter((a) => a.user_id !== null)
           .map((a) => a.id)
@@ -252,7 +254,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
       ) {
         // Only humans can mark notifications as responded.
         break;
-      } else if (isOutgoing(msg, ownAgentId)) {
+      } else if (isOutgoing(msg, ownAgentId, teamChat)) {
         // Any agent can mark incoming messages as responded.
         countBreak = true;
       }
@@ -372,7 +374,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
             <div className="flex justify-between mt-[2px] items-start">
               <div className="min-w-0 flex items-start text-muted-foreground">
                 {preview &&
-                  isOutgoing(preview, ownAgentId) &&
+                  isOutgoing(preview, ownAgentId, teamChat) &&
                   statusIcon(preview.status)}
                 {preview?.agent_id && preview.agent_id !== agent?.id && (
                   <div className="text-primary text-[14px] mr-1 shrink-0">

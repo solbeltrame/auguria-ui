@@ -31,6 +31,28 @@ type Addressed = Pick<
   "sender_address" | "content" | "agent_id" | "service"
 >;
 
+// Is this room a place colleagues talk to each OTHER, or one where they answer
+// somebody else together?
+//
+// It is a per-conversation question, and the API already answers it — RLS does,
+// in get_restricted_conversations: `local` (a room of members, by definition)
+// and a Slack conversation our bot is NOT in are visible by PARTICIPATION only,
+// while a Slack conversation the bot sits in is org-visible, which is what a
+// shared inbox is. Same line, drawn from the same two facts.
+export function isTeamChat(
+  conversation?: Pick<ConversationRow, "service" | "extra"> | null,
+): boolean {
+  if (!conversation) return false;
+
+  if (conversation.service === "local") return true;
+
+  if (conversation.service === "slack") {
+    return !(conversation.extra as ConversationExtra | null)?.is_bot_member;
+  }
+
+  return false;
+}
+
 // `messages.direction` is gone: authorship is the addressing. But which side of
 // the screen a bubble lands on is not authorship — it is authorship RELATIVE TO
 // THE VIEWER, and those only coincide where the peer is a contact.
@@ -39,22 +61,27 @@ type Addressed = Pick<
 //               filling sender_address on the echo of my own send (fill-once,
 //               preserve_message_addressing) cannot flip my message to the
 //               other side of the chat later.
-//   local       peerless: there is no contact to be addressed by, sender_address
-//               is always null and every party is a member. Anyone who is not me
-//               IS the other side — which is what makes an AI DM read like a
-//               chat instead of a monologue with two voices on the right.
-//   elsewhere   the contact-space rule: sender_address set = the peer authored
-//               it, null = the account did. A colleague's reply stays outgoing,
-//               shared inbox and all; the avatar is what tells us apart.
+//   team chat   the peer is a colleague, so anyone who is not me IS the other
+//               side. What makes an AI DM read like a chat instead of a
+//               monologue in two voices, and what puts a colleague's Slack
+//               message where a colleague's message belongs.
+//   a member    an inbox: whoever on our side answers, answers AS us. True of a
+//               reply typed here and of one typed in Slack, in a channel our
+//               bot is in. Inbound rows carry no agent_id on any service but
+//               Slack, so this cannot swallow a contact.
+//   otherwise   contact space: sender_address set = the peer authored it.
 export function messageDirection(
   message: Addressed,
   ownAgentId?: string | null,
+  teamChat?: boolean,
 ): Direction {
   if (isInternal(message)) return "internal";
 
   if (ownAgentId && message.agent_id === ownAgentId) return "outgoing";
 
-  if (message.service === "local") return "incoming";
+  if (teamChat || message.service === "local") return "incoming";
+
+  if (message.agent_id) return "outgoing";
 
   return message.sender_address !== null ? "incoming" : "outgoing";
 }
@@ -62,15 +89,17 @@ export function messageDirection(
 export function isIncoming(
   message: Addressed,
   ownAgentId?: string | null,
+  teamChat?: boolean,
 ): boolean {
-  return messageDirection(message, ownAgentId) === "incoming";
+  return messageDirection(message, ownAgentId, teamChat) === "incoming";
 }
 
 export function isOutgoing(
   message: Addressed,
   ownAgentId?: string | null,
+  teamChat?: boolean,
 ): boolean {
-  return messageDirection(message, ownAgentId) === "outgoing";
+  return messageDirection(message, ownAgentId, teamChat) === "outgoing";
 }
 
 // Can a message here have come from more than one party on the peer's side?

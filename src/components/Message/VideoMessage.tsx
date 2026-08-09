@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import {
   type MessageRow,
   type OutgoingStatus,
+  isTeamChat,
   messageDirection,
 } from "@/supabase/client";
 import useBoundStore from "@/stores/useBoundStore";
@@ -31,7 +32,10 @@ export default function VideoMessage(message: MessageRow) {
 
   // Which side the bubble lands on is viewer-relative; see messageDirection.
   const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
-  const direction = messageDirection(message, ownAgentId);
+  const teamChat = useBoundStore((state) =>
+    isTeamChat(state.chat.conversations.get(message.conversation_id)),
+  );
+  const direction = messageDirection(message, ownAgentId, teamChat);
 
   const content = message.content;
 
