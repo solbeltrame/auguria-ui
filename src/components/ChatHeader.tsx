@@ -6,7 +6,10 @@ import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useContactByAddress } from "@/queries/useContacts";
 import { useContactAddress } from "@/queries/useContactsAddresses";
-import type { InstagramContactAddressExtra } from "@/supabase/client";
+import {
+  type InstagramContactAddressExtra,
+  peerAddress,
+} from "@/supabase/client";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -17,47 +20,38 @@ export default function Header() {
     state.chat.conversations.get(state.ui.activeConvId || ""),
   );
 
-  const { data: contact } = useContactByAddress(
-    conversation?.address,
-    conversation?.service,
-  );
-  const { data: contactAddress } = useContactAddress(
-    conversation?.address,
-    conversation?.service,
-  );
-
   const service = conversation?.service;
-  // Groups carry the subject in the conversation name; the address is the
-  // opaque group id.
+  // Only a direct chat is with a contact: its address IS the peer's. See
+  // peerAddress.
+  const peer = peerAddress(conversation);
   const isGroup = conversation?.type === "group";
+
+  const { data: contact } = useContactByAddress(peer, service);
+  const { data: contactAddress } = useContactAddress(peer, service);
 
   const igExtra =
     service === "instagram"
       ? (contactAddress?.extra as InstagramContactAddressExtra | null)
       : null;
 
-  // Name fallback order: conversation.name → contact.name →
-  // contactAddress.extra?.name → @username (Instagram) → "?"
+  // Nearest name first: the contact, then what the service says about the
+  // address, then the conversation. A group or channel finds nothing in the
+  // first two, so its subject wins by falling through.
   const convName =
-    conversation?.name ||
     contact?.name ||
     contactAddress?.extra?.name ||
-    (igExtra?.username ? `@${igExtra.username}` : undefined);
+    (igExtra?.username ? `@${igExtra.username}` : undefined) ||
+    conversation?.name;
 
   const address = conversation?.address;
 
-  // When there is no name, show the (formatted) contact address instead of "?".
-  // WhatsApp addresses are phone numbers; Instagram addresses need no
-  // formatting. Groups fall back to their opaque JID.
+  // Nameless: show the address. Only a peer's address is a phone number worth
+  // formatting — a group or channel addresses a container, not a person.
   const displayName =
     convName ||
-    (isGroup
-      ? conversation?.address
-      : address
-        ? service === "whatsapp" || service === "whatsapp-web"
-          ? formatPhoneNumber(address)
-          : address
-        : undefined) ||
+    (peer && (service === "whatsapp" || service === "whatsapp-web")
+      ? formatPhoneNumber(peer)
+      : address) ||
     "?";
 
   const convInitials = nameInitials(convName || "?");
@@ -95,8 +89,8 @@ export default function Header() {
         <div className="text-[13px] text-muted-foreground truncate">
           {isGroup && t("Grupo")}
           {(service === "whatsapp" || service === "whatsapp-web") &&
-            address &&
-            formatPhoneNumber(address)}
+            peer &&
+            formatPhoneNumber(peer)}
           {service === "instagram" &&
             igExtra?.username &&
             `@${igExtra.username}`}

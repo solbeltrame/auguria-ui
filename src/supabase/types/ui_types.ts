@@ -102,6 +102,27 @@ export function isOutgoing(
   return messageDirection(message, ownAgentId, teamChat) === "outgoing";
 }
 
+// The peer's own address, when the conversation is with one nameable peer.
+//
+// A direct's address IS that peer's contacts_addresses address — that is the
+// whole of the relationship between the two tables, and it holds on no other
+// shape: a group, channel or broadcast addresses an opaque container, and a
+// `local` roster addresses members, who are not contacts at all. So this is
+// also the question "is there a contact to look up", and asking anywhere else
+// is a guaranteed miss.
+export function peerAddress(
+  conversation?: Pick<
+    ConversationRow,
+    "type" | "address" | "service" | "extra"
+  > | null,
+): string | undefined {
+  if (!conversation) return undefined;
+
+  if (conversation.service === "local") return undefined;
+
+  return isMultiParty(conversation) ? undefined : conversation.address;
+}
+
 // Can a message here have come from more than one party on the peer's side?
 //
 // That is what earns attribution — an avatar, or a sender name — its space: in

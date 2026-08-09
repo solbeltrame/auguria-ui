@@ -10,6 +10,7 @@ import {
   isInternal,
   isIncoming,
   isMultiParty,
+  peerAddress,
   isOutgoing,
   isTeamChat,
 } from "@/supabase/client";
@@ -167,17 +168,14 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
     state.chat.conversations.get(itemId),
   );
 
-  const isGroup = conversation?.type === "group";
   const ownAgentId = useBoundStore((state) => state.chat.ownAgentId);
   const teamChat = isTeamChat(conversation);
   const multiParty = !!conversation && isMultiParty(conversation);
+  const peer = peerAddress(conversation);
 
-  const { data: contact } = useContactByAddress(
-    isGroup ? undefined : conversation?.address,
-    conversation?.service,
-  );
+  const { data: contact } = useContactByAddress(peer, conversation?.service);
   const { data: contactAddress } = useContactAddress(
-    isGroup ? undefined : conversation?.address,
+    peer,
     conversation?.service,
   );
 
@@ -287,29 +285,27 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
       ? (contactAddress?.extra as InstagramContactAddressExtra | null)
       : null;
 
-  // Name fallback order: conversation.name → contact.name →
-  // contactAddress.extra?.name → @username (Instagram)
+  // Nearest name first: the contact, then what the service says about the
+  // address, then the conversation. The conversation's name is last because it
+  // is the connector's — a profile name at the time the row was minted — while
+  // a contact's is ours, and renaming one should be visible. On a group or a
+  // channel the first two find nothing, so the subject wins by falling
+  // through; no special case needed.
   const name =
-    conversation?.name ||
     contact?.name ||
     contactAddress?.extra?.name ||
-    (igExtra?.username ? `@${igExtra.username}` : undefined);
+    (igExtra?.username ? `@${igExtra.username}` : undefined) ||
+    conversation?.name;
 
-  // When there is no name, show the (formatted) peer address instead of "?".
-  // WhatsApp addresses are phone numbers; Instagram addresses need no
-  // formatting. For groups the name carries the group subject, falling back
-  // to the opaque group address.
-  const address = conversation?.address;
+  // Nameless: show the address. Only a peer's address is a phone number worth
+  // formatting — a group or channel addresses a container, not a person.
   const displayName =
     name ||
-    (isGroup
-      ? address
-      : address
-        ? conversation?.service === "whatsapp" ||
-          conversation?.service === "whatsapp-web"
-          ? formatPhoneNumber(address)
-          : address
-        : undefined) ||
+    (peer &&
+    (conversation?.service === "whatsapp" ||
+      conversation?.service === "whatsapp-web")
+      ? formatPhoneNumber(peer)
+      : conversation?.address) ||
     "?";
 
   const { translate: t, currentLanguage } = useTranslation();
