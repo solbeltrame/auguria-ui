@@ -52,16 +52,7 @@ function Conversations() {
                     <p>
                       {t("Te invitaron como")}{" "}
                       {roles[invitation.role || "member"]}
-                      {/* Null when the inviter is gone, or was never named. */}
-                      {invitation.invited_by_name && (
-                        <> · {invitation.invited_by_name}</>
-                      )}
                     </p>
-                    {invitation.invited_by_email && (
-                      <p className="text-[13px] opacity-75">
-                        {invitation.invited_by_email}
-                      </p>
-                    )}
                     <div className="flex gap-[16px] justify-end">
                       {answerInvitation.isPending ? (
                         <Spinner size={16} />
