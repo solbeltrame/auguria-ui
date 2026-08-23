@@ -2,7 +2,7 @@ import { useState } from "react";
 import SectionBody from "@/components/SectionBody";
 import SectionHeader from "@/components/SectionHeader";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useContacts } from "@/queries/useContacts";
+import { useContactsAddresses } from "@/queries/useContactsAddresses";
 import SectionItem from "@/components/SectionItem";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
@@ -10,6 +10,8 @@ import Avatar from "@/components/Avatar";
 import { formatPhoneNumber } from "@/utils/FormatUtils";
 import SearchBar from "@/components/SearchBar";
 import Fuse from "fuse.js";
+import { contactName } from "@/supabase/client";
+import { addressId } from "./$addressId";
 
 export const Route = createFileRoute("/_auth/contacts/")({
   component: ListContacts,
@@ -18,14 +20,22 @@ export const Route = createFileRoute("/_auth/contacts/")({
 function ListContacts() {
   const { translate: t } = useTranslation();
   const navigate = useNavigate();
-  const { data: contacts } = useContacts();
+  const { data: rows } = useContactsAddresses();
   const [search, setSearch] = useState("");
 
-  let filtered = contacts ?? [];
+  // An entry is one connection's address-book row; its name lives in extra
+  // (saved name over push name, see contactName).
+  const contacts = (rows ?? [])
+    .map((row) => ({ row, name: contactName(row.extra) }))
+    .sort((a, b) =>
+      (a.name || a.row.address).localeCompare(b.name || b.row.address),
+    );
+
+  let filtered = contacts;
   if (search) {
-    const fuse = new Fuse(filtered, {
+    const fuse = new Fuse(contacts, {
       threshold: 0.4,
-      keys: ["name", "addresses.address"],
+      keys: ["name", "row.address"],
     });
     filtered = fuse.search(search).map((r) => r.item);
   }
@@ -60,25 +70,26 @@ function ListContacts() {
             {t("Sin resultados para")} "{search}"
           </div>
         )}
-        {filtered.map((contact) => (
+        {filtered.map(({ row, name }) => (
           <SectionItem
-            key={contact.id}
-            title={contact.name || t("Sin nombre")}
+            key={addressId(row)}
+            title={name || t("Sin nombre")}
             description={
-              contact.addresses?.at(0)?.address
-                ? formatPhoneNumber(contact.addresses.at(0)!.address)
-                : t("Sin dirección")
+              row.service === "whatsapp" || row.service === "whatsapp-web"
+                ? formatPhoneNumber(row.address)
+                : row.address
             }
             aside={
               <Avatar
-                fallback={contact.name?.substring(0, 2).toUpperCase() || "?"}
+                fallback={name?.substring(0, 2).toUpperCase() || "?"}
                 size={40}
                 className="bg-muted text-muted-foreground"
               />
             }
             onClick={() =>
               navigate({
-                to: `/contacts/${contact.id}`,
+                to: "/contacts/$addressId",
+                params: { addressId: addressId(row) },
                 hash: (prevHash) => prevHash!,
               })
             }

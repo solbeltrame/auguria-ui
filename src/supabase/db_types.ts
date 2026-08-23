@@ -660,50 +660,12 @@ export type Database = {
           },
         ]
       }
-      contacts: {
-        Row: {
-          created_at: string
-          extra: Json | null
-          id: string
-          name: string | null
-          organization_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          extra?: Json | null
-          id?: string
-          name?: string | null
-          organization_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          extra?: Json | null
-          id?: string
-          name?: string | null
-          organization_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contacts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       contacts_addresses: {
         Row: {
           address: string
-          contact_id: string | null
           created_at: string
           extra: Json | null
+          organization_address: string
           organization_id: string
           service: Database["public"]["Enums"]["service"]
           status: string
@@ -711,9 +673,9 @@ export type Database = {
         }
         Insert: {
           address: string
-          contact_id?: string | null
           created_at?: string
           extra?: Json | null
+          organization_address: string
           organization_id: string
           service: Database["public"]["Enums"]["service"]
           status?: string
@@ -721,9 +683,9 @@ export type Database = {
         }
         Update: {
           address?: string
-          contact_id?: string | null
           created_at?: string
           extra?: Json | null
+          organization_address?: string
           organization_id?: string
           service?: Database["public"]["Enums"]["service"]
           status?: string
@@ -731,11 +693,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "contacts_addresses_contact_id_fkey"
-            columns: ["contact_id"]
+            foreignKeyName: "contacts_addresses_organization_address_fkey"
+            columns: ["organization_id", "service", "organization_address"]
             isOneToOne: false
-            referencedRelation: "contacts"
-            referencedColumns: ["id"]
+            referencedRelation: "organizations_addresses"
+            referencedColumns: ["organization_id", "service", "address"]
           },
           {
             foreignKeyName: "contacts_addresses_organization_id_fkey"
@@ -1225,16 +1187,6 @@ export type Database = {
         Args: { p_id: string; p_organization_id: string; p_user_id: string }
         Returns: boolean
       }
-      contact_address_update_rules: {
-        Args: {
-          p_address: string
-          p_extra: Json
-          p_organization_id: string
-          p_service: Database["public"]["Enums"]["service"]
-          p_status: string
-        }
-        Returns: boolean
-      }
       get_authorized_orgs: {
         Args: { role?: Database["public"]["Enums"]["role"] }
         Returns: string[]
@@ -1292,7 +1244,6 @@ export type Database = {
         | "messages"
         | "conversations"
         | "organizations_addresses"
-        | "contacts"
         | "contacts_addresses"
         | "logs"
     }
@@ -1986,7 +1937,6 @@ export const Constants = {
         "messages",
         "conversations",
         "organizations_addresses",
-        "contacts",
         "contacts_addresses",
         "logs",
       ],

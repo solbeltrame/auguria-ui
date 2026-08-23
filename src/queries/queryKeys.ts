@@ -24,20 +24,16 @@ export const queryKeys = {
       [orgId, "api_keys", id] as const,
   },
   contacts: {
-    all: (orgId: NullableId) => [orgId, "contacts"] as const,
-    detail: (orgId: NullableId, id: NullableId) =>
-      [orgId, "contacts", id] as const,
-    // contacts_addresses PK is (organization_id, service, address): the same
-    // phone digits may exist under whatsapp AND whatsapp-web as separate rows.
-    byAddress: (orgId: NullableId, service: NullableId, address: NullableId) =>
-      [orgId, "contacts_addresses", service, address, "contact"] as const,
-    addresses: (orgId: NullableId, contactId: NullableId) =>
-      [orgId, "contacts", contactId, "addresses"] as const,
+    all: (orgId: NullableId) => [orgId, "contacts_addresses"] as const,
+    // contacts_addresses PK is (organization_id, organization_address,
+    // service, address): an entry belongs to ONE connection's address book,
+    // and the same phone digits may exist under whatsapp AND whatsapp-web.
     addressDetail: (
       orgId: NullableId,
+      orgAddress: NullableId,
       service: NullableId,
       address: NullableId,
-    ) => [orgId, "contacts_addresses", service, address] as const,
+    ) => [orgId, "contacts_addresses", orgAddress, service, address] as const,
   },
   organizations: {
     all: () => ["organizations"] as const,

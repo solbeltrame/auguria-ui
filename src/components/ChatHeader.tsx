@@ -4,9 +4,9 @@ import useBoundStore from "@/stores/useBoundStore";
 import { useTranslation } from "@/hooks/useTranslation";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useContactByAddress } from "@/queries/useContacts";
 import { useContactAddress } from "@/queries/useContactsAddresses";
 import {
+  contactName,
   type InstagramContactAddressExtra,
   peerAddress,
 } from "@/supabase/client";
@@ -26,20 +26,22 @@ export default function Header() {
   const peer = peerAddress(conversation);
   const isGroup = conversation?.type === "group";
 
-  const { data: contact } = useContactByAddress(peer, service);
-  const { data: contactAddress } = useContactAddress(peer, service);
+  const { data: contactAddress } = useContactAddress(
+    conversation?.organization_address,
+    service,
+    peer,
+  );
 
   const igExtra =
     service === "instagram"
       ? (contactAddress?.extra as InstagramContactAddressExtra | null)
       : null;
 
-  // Nearest name first: the contact, then what the service says about the
-  // address, then the conversation. A group or channel finds nothing in the
-  // first two, so its subject wins by falling through.
+  // Nearest name first: the address-book entry (saved name over push name,
+  // see contactName), then the conversation. A group or channel finds no
+  // entry, so its subject wins by falling through.
   const convName =
-    contact?.name ||
-    contactAddress?.extra?.name ||
+    contactName(contactAddress?.extra) ||
     (igExtra?.username ? `@${igExtra.username}` : undefined) ||
     conversation?.name;
 

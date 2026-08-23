@@ -1,15 +1,24 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import SectionHeader from "@/components/SectionHeader";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useCreateContact } from "@/queries/useContacts";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useCreateContactAddress } from "@/queries/useContactsAddresses";
+import { useOrganizationsAddresses } from "@/queries/useOrganizationsAddresses";
+import { useForm } from "react-hook-form";
 import SectionBody from "@/components/SectionBody";
 import SectionFooter from "@/components/SectionFooter";
 import Button from "@/components/Button";
-import { Plus, X } from "lucide-react";
-import type { ContactWithAddressesInsert } from "@/supabase/client";
-import { isValidPhoneNumber } from "@/utils/FormatUtils";
+import {
+  formatPhoneNumber,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} from "@/utils/FormatUtils";
 import FieldError from "@/components/FieldError";
+import type {
+  OrganizationAddressRow,
+  WhatsAppOrganizationAddressExtra,
+} from "@/supabase/client";
+import { addressId } from "./$addressId";
 
 export const Route = createFileRoute("/_auth/contacts/new")({
   component: ContactNew,
@@ -18,23 +27,31 @@ export const Route = createFileRoute("/_auth/contacts/new")({
 function ContactNew() {
   const { translate: t } = useTranslation();
   const navigate = useNavigate();
-  const createContact = useCreateContact();
+  const createAddress = useCreateContactAddress();
+  const { data: orgAddresses } = useOrganizationsAddresses();
+
+  // An entry belongs to ONE connection's address book, so creating one names
+  // the connection. A hand-added contact is a phone-book entry: WhatsApp only.
+  const accounts = (orgAddresses ?? []).filter(
+    (a) => a.service === "whatsapp" || a.service === "whatsapp-web",
+  );
+
+  // Derived rather than stored: the accounts arrive with a query, and an
+  // initial state would keep whatever was true before they landed. The same
+  // digits can be a whatsapp AND a whatsapp-web connection, so the key names
+  // the service too.
+  const accountKey = (a: OrganizationAddressRow) => `${a.service}~${a.address}`;
+  const [chosen, setChosen] = useState<string | null>(null);
+  const chosenKey = chosen ?? (accounts[0] && accountKey(accounts[0]));
+  const account = accounts.find((a) => accountKey(a) === chosenKey);
 
   const {
     register,
     handleSubmit,
-    control,
     formState: { isValid, isDirty, errors },
-  } = useForm<ContactWithAddressesInsert>({
+  } = useForm<{ name: string; address: string }>({
     mode: "onTouched",
-    defaultValues: {
-      addresses: [{ address: "" }],
-    },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "addresses",
+    defaultValues: { name: "", address: "" },
   });
 
   return (
@@ -44,15 +61,25 @@ function ContactNew() {
       <SectionBody>
         <form
           id="contact-form"
-          onSubmit={handleSubmit((data) =>
-            createContact.mutate(data, {
-              onSuccess: (contact) =>
-                navigate({
-                  to: `/contacts/${contact.id}`,
-                  hash: (prevHash) => prevHash!,
-                }),
-            }),
-          )}
+          onSubmit={handleSubmit((data) => {
+            if (!account) return;
+            createAddress.mutate(
+              {
+                organization_address: account.address,
+                service: account.service,
+                address: normalizePhoneNumber(data.address),
+                extra: data.name ? { name: data.name } : null,
+              },
+              {
+                onSuccess: (row) =>
+                  navigate({
+                    to: "/contacts/$addressId",
+                    params: { addressId: addressId(row) },
+                    hash: (prevHash) => prevHash!,
+                  }),
+              },
+            );
+          })}
         >
           <label>
             <div className="label">{t("Nombre")}</div>
@@ -64,45 +91,38 @@ function ContactNew() {
             />
           </label>
 
-          {fields.map((field, idx) => (
-            <label key={field.id}>
-              <div className="label">
-                {t("Teléfono")} {idx + 1}
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="tel"
-                  className={`text ${errors.addresses?.[idx]?.address ? "border-destructive" : ""}`}
-                  placeholder={t("+54 9 11 1234 5678")}
-                  {...register(`addresses.${idx}.address`, {
-                    validate: (value) =>
-                      !value ||
-                      isValidPhoneNumber(value) ||
-                      t("Número inválido"),
-                  })}
-                />
-                <button
-                  type="button"
-                  className="p-[8px] rounded-full hover:bg-muted transition-colors"
-                  onClick={() => remove(idx)}
-                  title={t("Eliminar")}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <FieldError error={errors.addresses?.[idx]?.address} />
-            </label>
-          ))}
+          <label>
+            <div className="label">{t("Teléfono")}</div>
+            <input
+              type="tel"
+              className={`text ${errors.address ? "border-destructive" : ""}`}
+              placeholder={t("+54 9 11 1234 5678")}
+              {...register("address", {
+                required: true,
+                validate: (value) =>
+                  isValidPhoneNumber(value) || t("Número inválido"),
+              })}
+            />
+            <FieldError error={errors.address} />
+          </label>
 
-          {/* Add phone number button */}
-          <button
-            type="button"
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-full font-medium transition-colors w-fit text-[14px] flex items-center gap-2"
-            onClick={() => append({ address: "" })}
-          >
-            <Plus className="w-4 h-4" />
-            {t("Agregar teléfono")}
-          </button>
+          {accounts.length > 1 && (
+            <label>
+              <div className="label">{t("Cuenta")}</div>
+              <select
+                className="text"
+                value={chosenKey || ""}
+                onChange={(e) => setChosen(e.target.value)}
+              >
+                {accounts.map((a) => (
+                  <option key={accountKey(a)} value={accountKey(a)}>
+                    {(a.extra as WhatsAppOrganizationAddressExtra | null)
+                      ?.verified_name || formatPhoneNumber(a.address)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </form>
       </SectionBody>
 
@@ -110,8 +130,8 @@ function ContactNew() {
         <Button
           form="contact-form"
           type="submit"
-          invalid={!isValid || !isDirty}
-          loading={createContact.isPending}
+          invalid={!isValid || !isDirty || !account}
+          loading={createAddress.isPending}
           className="primary"
         >
           {t("Crear")}

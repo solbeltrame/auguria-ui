@@ -30,7 +30,7 @@ import { Route as AuthStatsQuotasRouteImport } from './routes/_auth/stats/quotas
 import { Route as AuthIntegrationsMediaPreprocessingRouteImport } from './routes/_auth/integrations/media-preprocessing'
 import { Route as AuthConversationsNewRouteImport } from './routes/_auth/conversations/new'
 import { Route as AuthContactsNewRouteImport } from './routes/_auth/contacts/new'
-import { Route as AuthContactsContactIdRouteImport } from './routes/_auth/contacts/$contactId'
+import { Route as AuthContactsAddressIdRouteImport } from './routes/_auth/contacts/$addressId'
 import { Route as AuthAgentsNewRouteImport } from './routes/_auth/agents/new'
 import { Route as AuthAgentsAgentIdRouteImport } from './routes/_auth/agents/$agentId'
 import { Route as AuthSettingsWebhooksIndexRouteImport } from './routes/_auth/settings/webhooks/index'
@@ -169,9 +169,9 @@ const AuthContactsNewRoute = AuthContactsNewRouteImport.update({
   path: '/contacts/new',
   getParentRoute: () => AuthRoute,
 } as any)
-const AuthContactsContactIdRoute = AuthContactsContactIdRouteImport.update({
-  id: '/contacts/$contactId',
-  path: '/contacts/$contactId',
+const AuthContactsAddressIdRoute = AuthContactsAddressIdRouteImport.update({
+  id: '/contacts/$addressId',
+  path: '/contacts/$addressId',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthAgentsNewRoute = AuthAgentsNewRouteImport.update({
@@ -365,7 +365,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthIndexRoute
   '/agents/$agentId': typeof AuthAgentsAgentIdRoute
   '/agents/new': typeof AuthAgentsNewRoute
-  '/contacts/$contactId': typeof AuthContactsContactIdRoute
+  '/contacts/$addressId': typeof AuthContactsAddressIdRoute
   '/contacts/new': typeof AuthContactsNewRoute
   '/conversations/new': typeof AuthConversationsNewRoute
   '/integrations/media-preprocessing': typeof AuthIntegrationsMediaPreprocessingRoute
@@ -418,7 +418,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthIndexRoute
   '/agents/$agentId': typeof AuthAgentsAgentIdRoute
   '/agents/new': typeof AuthAgentsNewRoute
-  '/contacts/$contactId': typeof AuthContactsContactIdRoute
+  '/contacts/$addressId': typeof AuthContactsAddressIdRoute
   '/contacts/new': typeof AuthContactsNewRoute
   '/conversations/new': typeof AuthConversationsNewRoute
   '/integrations/media-preprocessing': typeof AuthIntegrationsMediaPreprocessingRoute
@@ -474,7 +474,7 @@ export interface FileRoutesById {
   '/_auth/': typeof AuthIndexRoute
   '/_auth/agents/$agentId': typeof AuthAgentsAgentIdRoute
   '/_auth/agents/new': typeof AuthAgentsNewRoute
-  '/_auth/contacts/$contactId': typeof AuthContactsContactIdRoute
+  '/_auth/contacts/$addressId': typeof AuthContactsAddressIdRoute
   '/_auth/contacts/new': typeof AuthContactsNewRoute
   '/_auth/conversations/new': typeof AuthConversationsNewRoute
   '/_auth/integrations/media-preprocessing': typeof AuthIntegrationsMediaPreprocessingRoute
@@ -530,7 +530,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agents/$agentId'
     | '/agents/new'
-    | '/contacts/$contactId'
+    | '/contacts/$addressId'
     | '/contacts/new'
     | '/conversations/new'
     | '/integrations/media-preprocessing'
@@ -583,7 +583,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agents/$agentId'
     | '/agents/new'
-    | '/contacts/$contactId'
+    | '/contacts/$addressId'
     | '/contacts/new'
     | '/conversations/new'
     | '/integrations/media-preprocessing'
@@ -638,7 +638,7 @@ export interface FileRouteTypes {
     | '/_auth/'
     | '/_auth/agents/$agentId'
     | '/_auth/agents/new'
-    | '/_auth/contacts/$contactId'
+    | '/_auth/contacts/$addressId'
     | '/_auth/contacts/new'
     | '/_auth/conversations/new'
     | '/_auth/integrations/media-preprocessing'
@@ -844,11 +844,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthContactsNewRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_auth/contacts/$contactId': {
-      id: '/_auth/contacts/$contactId'
-      path: '/contacts/$contactId'
-      fullPath: '/contacts/$contactId'
-      preLoaderRoute: typeof AuthContactsContactIdRouteImport
+    '/_auth/contacts/$addressId': {
+      id: '/_auth/contacts/$addressId'
+      path: '/contacts/$addressId'
+      fullPath: '/contacts/$addressId'
+      preLoaderRoute: typeof AuthContactsAddressIdRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/agents/new': {
@@ -1092,7 +1092,7 @@ interface AuthRouteChildren {
   AuthIndexRoute: typeof AuthIndexRoute
   AuthAgentsAgentIdRoute: typeof AuthAgentsAgentIdRoute
   AuthAgentsNewRoute: typeof AuthAgentsNewRoute
-  AuthContactsContactIdRoute: typeof AuthContactsContactIdRoute
+  AuthContactsAddressIdRoute: typeof AuthContactsAddressIdRoute
   AuthContactsNewRoute: typeof AuthContactsNewRoute
   AuthConversationsNewRoute: typeof AuthConversationsNewRoute
   AuthIntegrationsMediaPreprocessingRoute: typeof AuthIntegrationsMediaPreprocessingRoute
@@ -1137,7 +1137,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthIndexRoute: AuthIndexRoute,
   AuthAgentsAgentIdRoute: AuthAgentsAgentIdRoute,
   AuthAgentsNewRoute: AuthAgentsNewRoute,
-  AuthContactsContactIdRoute: AuthContactsContactIdRoute,
+  AuthContactsAddressIdRoute: AuthContactsAddressIdRoute,
   AuthContactsNewRoute: AuthContactsNewRoute,
   AuthConversationsNewRoute: AuthConversationsNewRoute,
   AuthIntegrationsMediaPreprocessingRoute:

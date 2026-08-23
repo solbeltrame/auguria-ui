@@ -3,6 +3,7 @@ import Avatar from "./Avatar";
 import { getHighestStatus, getStatusIcon } from "@/utils/MessageStatusUtils";
 import useBoundStore from "@/stores/useBoundStore";
 import {
+  contactName,
   type Draft,
   type InstagramContactAddressExtra,
   type MessageRow,
@@ -27,7 +28,6 @@ import { AtSign } from "lucide-react";
 import { mediaCategory } from "./Message/media";
 
 import { useCurrentAgent, useCurrentAgents } from "@/queries/useAgents";
-import { useContactByAddress } from "@/queries/useContacts";
 import { useContactAddress } from "@/queries/useContactsAddresses";
 import { formatPhoneNumber, nameInitials } from "@/utils/FormatUtils";
 import { useNavigate } from "@tanstack/react-router";
@@ -173,10 +173,10 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
   const multiParty = !!conversation && isMultiParty(conversation);
   const peer = peerAddress(conversation);
 
-  const { data: contact } = useContactByAddress(peer, conversation?.service);
   const { data: contactAddress } = useContactAddress(
-    peer,
+    conversation?.organization_address,
     conversation?.service,
+    peer,
   );
 
   const { data: agent } = useCurrentAgent();
@@ -201,9 +201,10 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
     mostRecent.sender_address
       ? mostRecent.sender_address
       : undefined;
-  const { data: previewSender } = useContactByAddress(
-    previewSenderAddress,
+  const { data: previewSender } = useContactAddress(
+    conversation?.organization_address,
     conversation?.service,
+    previewSenderAddress,
   );
 
   const membershipExtra = useBoundStore((state) =>
@@ -285,15 +286,14 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
       ? (contactAddress?.extra as InstagramContactAddressExtra | null)
       : null;
 
-  // Nearest name first: the contact, then what the service says about the
-  // address, then the conversation. The conversation's name is last because it
-  // is the connector's — a profile name at the time the row was minted — while
-  // a contact's is ours, and renaming one should be visible. On a group or a
-  // channel the first two find nothing, so the subject wins by falling
+  // Nearest name first: the address-book entry (saved name over push name,
+  // see contactName), then the conversation. The conversation's name is last
+  // because it is the connector's — a profile name at the time the row was
+  // minted — while the entry's is ours, and renaming one should be visible.
+  // On a group or a channel there is no entry, so the subject wins by falling
   // through; no special case needed.
   const name =
-    contact?.name ||
-    contactAddress?.extra?.name ||
+    contactName(contactAddress?.extra) ||
     (igExtra?.username ? `@${igExtra.username}` : undefined) ||
     conversation?.name;
 
@@ -395,7 +395,7 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
                 {/* Group sender prefix, as in WhatsApp Web */}
                 {previewSenderAddress && preview === mostRecent && (
                   <div className="text-[14px] mr-1 shrink-0 max-w-[45%] truncate">
-                    {previewSender?.name ||
+                    {contactName(previewSender?.extra) ||
                       formatPhoneNumber(previewSenderAddress)}
                     :
                   </div>

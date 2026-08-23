@@ -2,8 +2,7 @@
 // UI-bespoke typed Database (kept, NOT mirrored from the API's database_types):
 // strict user_id-discriminated agent rows (an AI agent is one with no user_id),
 // npm `type-fest`, optional organization_id/conversation_id on message Insert,
-// and the full Row/Insert/Update + ContactWithAddresses* + Role alias set the
-// UI relies on.
+// and the full Row/Insert/Update + Role alias set the UI relies on.
 //===================================
 
 import type { Database as DatabaseGenerated, Json, Tables } from "../db_types";
@@ -17,7 +16,6 @@ import type { IncomingStatus, OutgoingStatus } from "./status_types";
 import type {
   AIAgentExtra,
   ContactAddressExtra,
-  ContactExtra,
   ConversationExtra,
   OrganizationAddressExtra,
   OrganizationExtra,
@@ -117,11 +115,6 @@ export type Database = MergeDeep<
             status?: IncomingStatus | OutgoingStatus;
           };
         };
-        contacts: {
-          Row: { extra: ContactExtra | null };
-          Insert: { extra?: ContactExtra | null };
-          Update: { extra?: ContactExtra | null };
-        };
         contacts_addresses: {
           Row: { extra: ContactAddressExtra | null };
           Insert: { extra?: ContactAddressExtra | null };
@@ -163,26 +156,12 @@ export type OrganizationInsert =
 export type OrganizationUpdate =
   Database["public"]["Tables"]["organizations"]["Update"];
 
-export type ContactRow = Database["public"]["Tables"]["contacts"]["Row"];
-export type ContactInsert = Database["public"]["Tables"]["contacts"]["Insert"];
-export type ContactUpdate = Database["public"]["Tables"]["contacts"]["Update"];
-
 export type ContactAddressRow =
   Database["public"]["Tables"]["contacts_addresses"]["Row"];
 export type ContactAddressInsert =
   Database["public"]["Tables"]["contacts_addresses"]["Insert"];
 export type ContactAddressUpdate =
   Database["public"]["Tables"]["contacts_addresses"]["Update"];
-
-export type ContactWithAddressesRow = ContactRow & {
-  addresses: ContactAddressRow[];
-};
-export type ContactWithAddressesInsert = ContactInsert & {
-  addresses: ContactAddressUpdate[];
-};
-export type ContactWithAddressesUpdate = ContactUpdate & {
-  addresses: ContactAddressUpdate[];
-};
 
 export type AgentRow = Database["public"]["Tables"]["agents"]["Row"];
 export type AgentInsert = Database["public"]["Tables"]["agents"]["Insert"];
