@@ -6,6 +6,8 @@
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string;
   readonly VITE_SUPABASE_ANON_KEY: string;
+  /** Comma-separated Supabase OAuth providers enabled in the login UI. */
+  readonly VITE_AUTH_PROVIDERS?: string;
   /** Optional: WhatsApp Embedded Signup. */
   readonly VITE_META_APP_ID?: string;
   /** Optional: Tech Provider login flow. */
