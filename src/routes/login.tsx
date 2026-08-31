@@ -102,36 +102,12 @@ function Login() {
       </div>
 
       <div className="flex flex-col gap-3 w-[250px]">
-        {configuredOAuthProviders.map((provider) => {
-          const Icon = oauthProviderConfig[provider].icon;
-          const label =
-            provider === "google"
-              ? t("Continuar con Google")
-              : provider === "apple"
-                ? t("Continuar con Apple")
-                : t("Continuar con Facebook");
-
-          return (
-            <button
-              key={provider}
-              type="button"
-              className={`primary ${oauthProviderConfig[provider].className} text-white w-full border-none`}
-              onClick={() => handleLogInWithOauth(provider)}
-              disabled={loadingProvider !== null}
-            >
-              <Icon /> {loadingProvider === provider ? t("Cargando...") : label}
-            </button>
-          );
-        })}
-
-        <div className="border-b border-border w-full" />
-
         <form onSubmit={handleLogInWithEmail} className="login-form">
           <label>
             <div className="label">{t("Correo electrónico")}</div>
             <input
               className="text"
-              placeholder="gori@gmail.com"
+              placeholder="seu@email.com"
               type="email"
               autoComplete="email"
               required
@@ -163,6 +139,30 @@ function Login() {
             {t("Entrar")}
           </button>
         </form>
+
+        <div className="border-b border-border w-full" />
+
+        {configuredOAuthProviders.map((provider) => {
+          const Icon = oauthProviderConfig[provider].icon;
+          const label =
+            provider === "google"
+              ? t("Continuar con Google")
+              : provider === "apple"
+                ? t("Continuar con Apple")
+                : t("Continuar con Facebook");
+
+          return (
+            <button
+              key={provider}
+              type="button"
+              className={`primary ${oauthProviderConfig[provider].className} text-white w-full border-none`}
+              onClick={() => handleLogInWithOauth(provider)}
+              disabled={loadingProvider !== null}
+            >
+              <Icon /> {loadingProvider === provider ? t("Cargando...") : label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
