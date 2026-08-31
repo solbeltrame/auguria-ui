@@ -4,6 +4,7 @@ export default function SectionItem({
   title,
   description,
   aside,
+  trailing,
   onClick,
   className,
   disabled,
@@ -12,6 +13,7 @@ export default function SectionItem({
   title: ReactNode;
   description?: ReactNode;
   aside?: ReactNode;
+  trailing?: ReactNode;
   onClick?: () => void;
   className?: string;
   disabled?: boolean;
@@ -39,8 +41,9 @@ export default function SectionItem({
       {/* Right Pane: Content */}
       <div className="flex flex-col justify-center grow min-w-0 pr-[15px]">
         {/* Upper Row: Title */}
-        <div className="flex justify-between items-baseline">
+        <div className="flex justify-between items-center gap-3">
           <div className="truncate text-foreground text-[16px]">{title}</div>
+          {trailing}
         </div>
 
         {/* Lower Row: Description */}

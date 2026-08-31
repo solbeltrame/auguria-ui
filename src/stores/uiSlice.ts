@@ -58,6 +58,8 @@ export type TemplateDraft = {
 
 export type Language = "es" | "en" | "pt" | "sw" | "fr";
 
+export type ThemeMode = "light" | "dark" | "auto";
+
 const SUPPORTED_LANGUAGES: Language[] = ["es", "en", "pt", "sw", "fr"];
 
 export function detectDefaultLanguage(): Language {
@@ -84,6 +86,7 @@ export type UIState = {
   searchPattern: string;
   isLoading: boolean;
   language: Language;
+  theme: ThemeMode;
 };
 
 export type UIActions = {
@@ -95,6 +98,7 @@ export type UIActions = {
   setSearchPattern: (searchPattern: string) => void;
   setTemplateDraft: (convId: string, draft: TemplateDraft | null) => void;
   setLanguage: (lang: Language) => void;
+  setTheme: (theme: ThemeMode) => void;
 };
 
 export type UISlice = UIState & UIActions;
@@ -118,6 +122,7 @@ export const createUISlice: StateCreator<Partial<AppState>> = (
   searchPattern: "",
   isLoading: false,
   language: detectDefaultLanguage(),
+  theme: "auto",
   toggle: (component: keyof UIState, value?: boolean) =>
     set((state) => ({
       ui: {
@@ -173,5 +178,9 @@ export const createUISlice: StateCreator<Partial<AppState>> = (
   setLanguage: (language: Language) =>
     set((state) => ({
       ui: { ...state.ui, language },
+    })),
+  setTheme: (theme: ThemeMode) =>
+    set((state) => ({
+      ui: { ...state.ui, theme },
     })),
 });

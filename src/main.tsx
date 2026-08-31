@@ -6,7 +6,12 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { TickProvider } from "./contexts/useTick";
 import { WhatsAppIntegrationProvider } from "./contexts/WhatsAppIntegrationContext";
 import { loadTranslations } from "./i18n/translations";
-import { detectDefaultLanguage, type Language } from "./stores/uiSlice";
+import useBoundStore from "./stores/useBoundStore";
+import {
+  detectDefaultLanguage,
+  type Language,
+  type ThemeMode,
+} from "./stores/uiSlice";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
@@ -37,22 +42,44 @@ window.addEventListener("vite:preloadError", (event) => {
   window.location.reload();
 });
 
-// Dark mode detection
 const darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
-function updateTheme(e: MediaQueryListEvent | MediaQueryList) {
-  if (e.matches) {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
+function detectTheme(): ThemeMode {
+  try {
+    const stored = JSON.parse(localStorage.getItem("app-state") || "{}") as {
+      state?: { ui?: { theme?: ThemeMode } };
+    };
+    const theme = stored.state?.ui?.theme;
+    if (theme === "light" || theme === "dark" || theme === "auto") {
+      return theme;
+    }
+  } catch {
+    /* ignore */
   }
+
+  return "auto";
 }
 
-// Initial check
-updateTheme(darkModeMediaQuery);
+function applyTheme(theme: ThemeMode) {
+  const isDark =
+    theme === "dark" || (theme === "auto" && darkModeMediaQuery.matches);
+  document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+}
 
-// Listen for changes
-darkModeMediaQuery.addEventListener("change", updateTheme);
+let activeTheme = detectTheme();
+applyTheme(activeTheme);
+
+darkModeMediaQuery.addEventListener("change", () => {
+  if (activeTheme === "auto") applyTheme(activeTheme);
+});
+
+useBoundStore.subscribe((state, previousState) => {
+  if (state.ui.theme !== previousState.ui.theme) {
+    activeTheme = state.ui.theme;
+    applyTheme(activeTheme);
+  }
+});
 
 // Preload translations before rendering
 function detectLanguage(): Language {

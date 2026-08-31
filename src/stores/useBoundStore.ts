@@ -57,6 +57,7 @@ const useBoundStore = create<AppState>()(
           filter: state.ui.filter,
           activeOrgId: state.ui.activeOrgId,
           language: state.ui.language,
+          theme: state.ui.theme,
         },
       }),
     },

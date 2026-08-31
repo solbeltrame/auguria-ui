@@ -13,7 +13,7 @@ import {
   Plus,
   NotebookTabs,
 } from "lucide-react";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { LinkButton } from "./LinkButton";
 import { resetAuthorizedCache } from "@/utils/IdbUtils";
 import { useCurrentAgent } from "@/queries/useAgents";
@@ -43,7 +43,25 @@ export default function Menu() {
   // Simpler approach - call useLocation without select first
   const location = useLocation();
   const navigate = useNavigate();
+  const router = useRouter();
   const pathname = location.pathname;
+  const isSettingsRoute = pathname.startsWith("/settings");
+
+  const handleSettingsToggle = () => {
+    if (isSettingsRoute) {
+      if (window.history.length > 1) {
+        router.history.back();
+      } else {
+        void navigate({ to: "/conversations" });
+      }
+      return;
+    }
+
+    void navigate({
+      to: "/settings",
+      hash: (prevHash) => prevHash!,
+    });
+  };
 
   return (
     <div
@@ -107,14 +125,19 @@ export default function Menu() {
       {/* Lower section */}
       <div className="flex flex-col items-center">
         {/* Settings button */}
-        <LinkButton
-          to="/settings"
+        <button
+          type="button"
           title={t("Preferencias")}
-          isActive={pathname.startsWith("/settings")}
-          className="mt-[10px]"
+          aria-label={t("Preferencias")}
+          aria-pressed={isSettingsRoute}
+          onClick={handleSettingsToggle}
+          className={
+            "mt-[10px] p-[8px] rounded-full border-0 bg-transparent text-sidebar-foreground hover:bg-muted" +
+            (isSettingsRoute ? " bg-muted" : "")
+          }
         >
           <Settings className="w-[20px] h-[20px] stroke-[2]" />
-        </LinkButton>
+        </button>
 
         <Dropdown
           menu={{
@@ -128,7 +151,7 @@ export default function Menu() {
               {
                 key: "orgs",
                 type: "group",
-                label: "Organizaciones",
+                label: t("Empresas"),
                 children: [
                   ...(organizations?.map((org) => ({
                     key: org.id,
