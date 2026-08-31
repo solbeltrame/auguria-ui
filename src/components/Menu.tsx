@@ -19,6 +19,7 @@ import { resetAuthorizedCache } from "@/utils/IdbUtils";
 import { useCurrentAgent } from "@/queries/useAgents";
 import { Dropdown } from "antd";
 import { useOrganizations } from "@/queries/useOrganizations";
+import { useEffect, useState } from "react";
 
 export default function Menu() {
   const user = useBoundStore((state) => state.ui.user);
@@ -46,14 +47,25 @@ export default function Menu() {
   const router = useRouter();
   const pathname = location.pathname;
   const isSettingsRoute = pathname.startsWith("/settings");
+  const [closingSettings, setClosingSettings] = useState(false);
+
+  useEffect(() => {
+    if (!closingSettings) return;
+
+    if (isSettingsRoute && window.history.length > 1) {
+      router.history.back();
+      return;
+    }
+
+    if (isSettingsRoute) {
+      void navigate({ to: "/conversations" });
+    }
+    setClosingSettings(false);
+  }, [closingSettings, isSettingsRoute, navigate, router]);
 
   const handleSettingsToggle = () => {
     if (isSettingsRoute) {
-      if (window.history.length > 1) {
-        router.history.back();
-      } else {
-        void navigate({ to: "/conversations" });
-      }
+      setClosingSettings(true);
       return;
     }
 
