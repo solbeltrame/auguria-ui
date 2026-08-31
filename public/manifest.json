@@ -1,23 +1,23 @@
 {
-  "short_name": "OpenBSP",
-  "name": "OpenBSP - WhatsApp Web and Instagram interface",
-  "description": "Open-source WhatsApp Web and Instagram interface. Self-hostable, multi-tenant, and AI-agent ready.",
+  "short_name": "Auguria",
+  "name": "Auguria - atendimento inteligente no WhatsApp e Instagram",
+  "description": "Atendimento inteligente para WhatsApp e Instagram, com agentes de IA e operação multiempresa.",
   "icons": [
     {
-      "src": "/logo-192x192.png",
-      "type": "image/png",
-      "sizes": "192x192",
+      "src": "/logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
       "purpose": "any"
     },
     {
-      "src": "/logo-512x512.png",
-      "type": "image/png",
-      "sizes": "512x512",
+      "src": "/logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
       "purpose": "any"
     }
   ],
   "start_url": "/",
   "background_color": "#faf8f1",
   "display": "standalone",
-  "theme_color": "#cb6441"
+  "theme_color": "#7c3aed"
 }

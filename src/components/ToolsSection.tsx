@@ -55,7 +55,7 @@ type EditorState =
   | { type: "new-selection" }
   | { type: "mcp"; index: number }
   | { type: "google-mcp"; index: number }
-  | { type: "openbsp-mcp"; index: number }
+  | { type: "auguria-mcp"; index: number }
   | { type: "http"; index: number }
   | { type: "sql"; index: number };
 
@@ -95,7 +95,7 @@ export default function ToolsSection<T extends FieldValues & ToolsForm>(props: {
     ["calendar", "sheets"].includes(tool.config.product ?? ""),
   );
 
-  const openbspTools = mcpClients.filter(
+  const auguriaTools = mcpClients.filter(
     (tool) => tool.config.product === "openbsp",
   );
 
@@ -211,7 +211,7 @@ export default function ToolsSection<T extends FieldValues & ToolsForm>(props: {
     setEditor({ type: "google-mcp", index: fields.length });
   };
 
-  const handleAddOpenBSP = () => {
+  const handleAddAuguria = () => {
     const defaultTools = [
       "list_conversations",
       "fetch_conversation",
@@ -232,7 +232,7 @@ export default function ToolsSection<T extends FieldValues & ToolsForm>(props: {
       },
     };
     append(newTool);
-    setEditor({ type: "openbsp-mcp", index: fields.length });
+    setEditor({ type: "auguria-mcp", index: fields.length });
   };
 
   const handleDeleteTool = (index: number) => {
@@ -313,8 +313,8 @@ export default function ToolsSection<T extends FieldValues & ToolsForm>(props: {
               />
             ))}
 
-            {/* OpenBSP Tools */}
-            {openbspTools.map((tool) => (
+            {/* Auguria Tools */}
+            {auguriaTools.map((tool) => (
               <SectionItem
                 key={tool.id}
                 title={tool.label || t("Sin nombre")}
@@ -325,7 +325,7 @@ export default function ToolsSection<T extends FieldValues & ToolsForm>(props: {
                   </div>
                 }
                 onClick={() =>
-                  setEditor({ type: "openbsp-mcp", index: tool._index })
+                  setEditor({ type: "auguria-mcp", index: tool._index })
                 }
               />
             ))}
@@ -417,7 +417,7 @@ export default function ToolsSection<T extends FieldValues & ToolsForm>(props: {
           onAddHTTP={handleAddHTTP}
           onAddSQL={handleAddSQL}
           onAddGoogle={handleAddGoogle}
-          onAddOpenBSP={handleAddOpenBSP}
+          onAddAuguria={handleAddAuguria}
         />
       )}
 
@@ -437,9 +437,9 @@ export default function ToolsSection<T extends FieldValues & ToolsForm>(props: {
         />
       )}
 
-      {/* OpenBSP MCP Client Editor */}
-      {isOpen && editor.type === "openbsp-mcp" && (
-        <OpenBSPMCPClientEditor
+      {/* Auguria MCP Client Editor */}
+      {isOpen && editor.type === "auguria-mcp" && (
+        <AuguriaMCPClientEditor
           index={editor.index}
           register={register}
           control={control}
@@ -1296,8 +1296,8 @@ function GoogleMCPClientEditor({
   );
 }
 
-// OpenBSP MCP Client Editor
-function OpenBSPMCPClientEditor({
+// Auguria MCP Client Editor
+function AuguriaMCPClientEditor({
   index,
   register,
   control,
@@ -1332,12 +1332,14 @@ function OpenBSPMCPClientEditor({
       name: `extra.tools.${index}.config.headers.authorization`,
     }) as string) || "";
 
-  // Auto-auth for owners: find or create an "OpenBSP MCP" API key
+  // Auto-auth for owners: find or create an "Auguria MCP" API key
   const hasToken = token.trim() !== "";
   useEffect(() => {
     if (!isOwner || autoAuthDone || hasToken || !apiKeys) return;
 
-    const existing = apiKeys.find((k) => k.name === "OpenBSP MCP");
+    const existing = apiKeys.find(
+      (k) => k.name === "Auguria MCP" || k.name === "OpenBSP MCP",
+    );
     if (existing) {
       setValue(
         `extra.tools.${index}.config.headers.authorization`,
@@ -1346,7 +1348,7 @@ function OpenBSPMCPClientEditor({
       );
       setAutoAuthDone(true);
     } else {
-      void createApiKey({ name: "OpenBSP MCP", role: "member" }).then(
+      void createApiKey({ name: "Auguria MCP", role: "member" }).then(
         (newKey) => {
           if (newKey) {
             setValue(
@@ -1491,14 +1493,14 @@ function NewToolSelection({
   onAddHTTP,
   onAddSQL,
   onAddGoogle,
-  onAddOpenBSP,
+  onAddAuguria,
 }: {
   onBack: () => void;
   onAddMCP: () => void;
   onAddHTTP: () => void;
   onAddSQL: () => void;
   onAddGoogle: (product: "calendar" | "sheets") => void;
-  onAddOpenBSP: () => void;
+  onAddAuguria: () => void;
 }) {
   const { translate: t } = useTranslation();
 
@@ -1525,7 +1527,7 @@ function NewToolSelection({
               <MessageSquare className="w-[24px] h-[24px] text-muted-foreground" />
             </div>
           }
-          onClick={onAddOpenBSP}
+          onClick={onAddAuguria}
         />
         <SectionItem
           title={t("Cliente MCP")}

@@ -60,6 +60,8 @@ export type Language = "es" | "en" | "pt" | "sw" | "fr";
 
 export type ThemeMode = "light" | "dark" | "auto";
 
+export type AccentColor = "terracotta" | "purple" | "green" | "blue" | "red";
+
 const SUPPORTED_LANGUAGES: Language[] = ["es", "en", "pt", "sw", "fr"];
 
 export function detectDefaultLanguage(): Language {
@@ -87,6 +89,7 @@ export type UIState = {
   isLoading: boolean;
   language: Language;
   theme: ThemeMode;
+  accentColor: AccentColor;
 };
 
 export type UIActions = {
@@ -99,6 +102,7 @@ export type UIActions = {
   setTemplateDraft: (convId: string, draft: TemplateDraft | null) => void;
   setLanguage: (lang: Language) => void;
   setTheme: (theme: ThemeMode) => void;
+  setAccentColor: (accentColor: AccentColor) => void;
 };
 
 export type UISlice = UIState & UIActions;
@@ -123,6 +127,7 @@ export const createUISlice: StateCreator<Partial<AppState>> = (
   isLoading: false,
   language: detectDefaultLanguage(),
   theme: "auto",
+  accentColor: "purple",
   toggle: (component: keyof UIState, value?: boolean) =>
     set((state) => ({
       ui: {
@@ -182,5 +187,9 @@ export const createUISlice: StateCreator<Partial<AppState>> = (
   setTheme: (theme: ThemeMode) =>
     set((state) => ({
       ui: { ...state.ui, theme },
+    })),
+  setAccentColor: (accentColor: AccentColor) =>
+    set((state) => ({
+      ui: { ...state.ui, accentColor },
     })),
 });

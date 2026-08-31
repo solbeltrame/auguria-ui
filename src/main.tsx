@@ -9,9 +9,11 @@ import { loadTranslations } from "./i18n/translations";
 import useBoundStore from "./stores/useBoundStore";
 import {
   detectDefaultLanguage,
+  type AccentColor,
   type Language,
   type ThemeMode,
 } from "./stores/uiSlice";
+import { applyAccentColor } from "./theme";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
@@ -60,24 +62,53 @@ function detectTheme(): ThemeMode {
   return "auto";
 }
 
-function applyTheme(theme: ThemeMode) {
+function detectAccentColor(): AccentColor {
+  try {
+    const stored = JSON.parse(localStorage.getItem("app-state") || "{}") as {
+      state?: { ui?: { accentColor?: AccentColor } };
+    };
+    const accentColor = stored.state?.ui?.accentColor;
+    if (
+      accentColor === "terracotta" ||
+      accentColor === "purple" ||
+      accentColor === "green" ||
+      accentColor === "blue" ||
+      accentColor === "red"
+    ) {
+      return accentColor;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return "purple";
+}
+
+function applyTheme(theme: ThemeMode, accentColor: AccentColor) {
   const isDark =
     theme === "dark" || (theme === "auto" && darkModeMediaQuery.matches);
   document.documentElement.classList.toggle("dark", isDark);
   document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  applyAccentColor(accentColor, isDark);
 }
 
 let activeTheme = detectTheme();
-applyTheme(activeTheme);
+let activeAccentColor = detectAccentColor();
+applyTheme(activeTheme, activeAccentColor);
 
 darkModeMediaQuery.addEventListener("change", () => {
-  if (activeTheme === "auto") applyTheme(activeTheme);
+  if (activeTheme === "auto") applyTheme(activeTheme, activeAccentColor);
 });
 
 useBoundStore.subscribe((state, previousState) => {
-  if (state.ui.theme !== previousState.ui.theme) {
+  const themeChanged = state.ui.theme !== previousState.ui.theme;
+  const accentColorChanged =
+    state.ui.accentColor !== previousState.ui.accentColor;
+
+  if (themeChanged || accentColorChanged) {
     activeTheme = state.ui.theme;
-    applyTheme(activeTheme);
+    activeAccentColor = state.ui.accentColor;
+    applyTheme(activeTheme, activeAccentColor);
   }
 });
 

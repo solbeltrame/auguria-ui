@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to OpenBSP UI!
+Thanks for your interest in contributing to Auguria UI!
 
 ## Local Setup
 
@@ -9,8 +9,8 @@ Requires Node (the repo pins the version in `mise.toml`).
 1. Clone the repo:
 
    ```bash
-   git clone https://github.com/matiasbattocchia/open-bsp-ui
-   cd open-bsp-ui
+   git clone https://github.com/solbeltrame/auguria-ui
+   cd auguria-ui
    ```
 
 2. Install dependencies:

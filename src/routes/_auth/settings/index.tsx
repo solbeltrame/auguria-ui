@@ -4,7 +4,8 @@ import SectionItem from "@/components/SectionItem";
 import { useTranslation } from "@/hooks/useTranslation";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import useBoundStore from "@/stores/useBoundStore";
-import type { ThemeMode } from "@/stores/uiSlice";
+import type { AccentColor, ThemeMode } from "@/stores/uiSlice";
+import { ACCENT_PALETTES } from "@/theme";
 import {
   Building2,
   Users,
@@ -13,6 +14,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Palette,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_auth/settings/")({
@@ -24,6 +26,8 @@ function SettingsIndex() {
   const navigate = useNavigate();
   const theme = useBoundStore((state) => state.ui.theme);
   const setTheme = useBoundStore((state) => state.ui.setTheme);
+  const accentColor = useBoundStore((state) => state.ui.accentColor);
+  const setAccentColor = useBoundStore((state) => state.ui.setAccentColor);
 
   const themeIcon =
     theme === "light" ? (
@@ -33,6 +37,14 @@ function SettingsIndex() {
     ) : (
       <Monitor className="w-[24px] h-[24px] text-muted-foreground" />
     );
+
+  const accentOptions: { value: AccentColor; label: string }[] = [
+    { value: "terracotta", label: t("Terracota") },
+    { value: "purple", label: t("Roxo") },
+    { value: "green", label: t("Verde") },
+    { value: "blue", label: t("Azul") },
+    { value: "red", label: t("Vermelho") },
+  ];
 
   return (
     <>
@@ -64,6 +76,43 @@ function SettingsIndex() {
                 <option value="dark">{t("Oscuro")}</option>
                 <option value="auto">{t("Automático")}</option>
               </select>
+            }
+          />
+          <SectionItem
+            title={t("Cor de destaque")}
+            description={t("Cor dos botões e destaques")}
+            aside={
+              <div className="p-[8px]">
+                <Palette className="w-[24px] h-[24px] text-muted-foreground" />
+              </div>
+            }
+            trailing={
+              <div
+                className="flex shrink-0 gap-[4px]"
+                role="radiogroup"
+                aria-label={t("Cor de destaque")}
+              >
+                {accentOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={accentColor === value}
+                    aria-label={label}
+                    title={label}
+                    onClick={() => setAccentColor(value)}
+                    className={
+                      "w-[22px] h-[22px] rounded-full border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 " +
+                      (accentColor === value
+                        ? "border-foreground"
+                        : "border-transparent hover:border-muted-foreground")
+                    }
+                    style={{
+                      backgroundColor: ACCENT_PALETTES[value].swatch,
+                    }}
+                  />
+                ))}
+              </div>
             }
           />
         </section>
