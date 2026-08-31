@@ -50,6 +50,9 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"error" | "success">("error");
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [loadingEmail, setLoadingEmail] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(
     null,
   );
@@ -59,6 +62,7 @@ function Login() {
 
   async function handleLogInWithOauth(provider: OAuthProvider) {
     setMessage("");
+    setMessageKind("error");
     setLoadingProvider(provider);
 
     try {
@@ -79,20 +83,59 @@ function Login() {
     }
   }
 
-  async function handleLogInWithEmail(e?: React.FormEvent) {
-    if (e) e.preventDefault();
+  async function handleEmailSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage("");
+    setMessageKind("error");
+    setLoadingEmail(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      if (authMode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin + (redirect || "/"),
+          },
+        });
 
-    if (error) {
-      setMessage(t("¡Credenciales inválidas!"));
-    } else {
-      setEmail("");
-      setPassword("");
+        if (error) {
+          setMessage(t("No pudimos crear la cuenta. Intentá de nuevo."));
+          return;
+        }
+
+        setPassword("");
+        if (data.session) {
+          setEmail("");
+        } else {
+          setMessage(
+            t("Cuenta creada. Revisá tu correo para confirmar el registro."),
+          );
+          setMessageKind("success");
+        }
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setMessage(t("¡Credenciales inválidas!"));
+      } else {
+        setEmail("");
+        setPassword("");
+      }
+    } finally {
+      setLoadingEmail(false);
     }
+  }
+
+  function handleAuthModeChange() {
+    setAuthMode((mode) => (mode === "login" ? "signup" : "login"));
+    setMessage("");
+    setPassword("");
   }
 
   return (
@@ -102,7 +145,7 @@ function Login() {
       </div>
 
       <div className="flex flex-col gap-3 w-[250px]">
-        <form onSubmit={handleLogInWithEmail} className="login-form">
+        <form onSubmit={handleEmailSubmit} className="login-form">
           <label>
             <div className="label">{t("Correo electrónico")}</div>
             <input
@@ -122,7 +165,10 @@ function Login() {
               className="text"
               placeholder="******"
               type="password"
-              autoComplete="current-password"
+              autoComplete={
+                authMode === "signup" ? "new-password" : "current-password"
+              }
+              minLength={authMode === "signup" ? 6 : undefined}
               required
               onChange={(e) => setPassword(e.target.value)}
               value={password}
@@ -130,15 +176,34 @@ function Login() {
           </label>
 
           {message && (
-            <div className="self-center text-destructive text-md">
+            <div
+              className={`self-center text-md ${messageKind === "success" ? "text-green-600" : "text-destructive"}`}
+            >
               {message}
             </div>
           )}
 
-          <button type="submit" className="primary w-full mt-[16px]">
-            {t("Entrar")}
+          <button
+            type="submit"
+            className="primary w-full mt-[16px]"
+            disabled={loadingEmail || loadingProvider !== null}
+          >
+            {loadingEmail
+              ? t("Cargando...")
+              : authMode === "signup"
+                ? t("Crear cuenta")
+                : t("Entrar")}
           </button>
         </form>
+
+        <button
+          type="button"
+          className="text-primary underline text-sm"
+          onClick={handleAuthModeChange}
+          disabled={loadingEmail || loadingProvider !== null}
+        >
+          {authMode === "signup" ? t("Ya tengo una cuenta") : t("Crear cuenta")}
+        </button>
 
         <div className="border-b border-border w-full" />
 
@@ -157,7 +222,7 @@ function Login() {
               type="button"
               className={`primary ${oauthProviderConfig[provider].className} text-white w-full border-none`}
               onClick={() => handleLogInWithOauth(provider)}
-              disabled={loadingProvider !== null}
+              disabled={loadingProvider !== null || loadingEmail}
             >
               <Icon /> {loadingProvider === provider ? t("Cargando...") : label}
             </button>
