@@ -90,6 +90,7 @@ export default function Menu() {
           title={t("Mensajes")}
           isActive={pathname.startsWith("/conversations")}
           className="mt-[10px]"
+          tooltip
         >
           <MessageSquareText className="w-[24px] h-[24px] stroke-[2]" />
         </LinkButton>
@@ -100,6 +101,7 @@ export default function Menu() {
           title={t("Agentes")}
           isActive={pathname.startsWith("/agents")}
           className="mt-[10px]"
+          tooltip
         >
           <Bot className="w-[24px] h-[24px] stroke-[2]" />
         </LinkButton>
@@ -110,6 +112,7 @@ export default function Menu() {
           title={t("Contactos")}
           isActive={pathname.startsWith("/contacts")}
           className="mt-[10px]"
+          tooltip
         >
           <NotebookTabs className="w-[24px] h-[24px] stroke-[2]" />
         </LinkButton>
@@ -120,6 +123,7 @@ export default function Menu() {
           title={t("Integraciones")}
           isActive={pathname.startsWith("/integrations")}
           className="mt-[10px]"
+          tooltip
         >
           <Unplug className="w-[24px] h-[24px] stroke-[2]" />
         </LinkButton>
@@ -130,6 +134,7 @@ export default function Menu() {
           title={t("Estadísticas")}
           isActive={pathname.startsWith("/stats")}
           className="mt-[10px]"
+          tooltip
         >
           <BarChart3 className="w-[24px] h-[24px] stroke-[2]" />
         </LinkButton>
@@ -140,6 +145,7 @@ export default function Menu() {
           title={t("Conhecimento")}
           isActive={pathname.startsWith("/knowledge")}
           className="mt-[10px]"
+          tooltip
         >
           <LibraryBig className="w-[24px] h-[24px] stroke-[2]" />
         </LinkButton>
@@ -150,12 +156,12 @@ export default function Menu() {
         {/* Settings button */}
         <button
           type="button"
-          title={t("Preferencias")}
           aria-label={t("Preferencias")}
+          data-menu-tooltip={t("Preferencias")}
           aria-pressed={isSettingsRoute}
           onClick={handleSettingsToggle}
           className={
-            "mt-[10px] p-[8px] rounded-full border-0 bg-transparent text-sidebar-foreground hover:bg-muted" +
+            "menu-tooltip mt-[10px] p-[8px] rounded-full border-0 bg-transparent text-sidebar-foreground hover:bg-muted" +
             (isSettingsRoute ? " bg-muted" : "")
           }
         >
@@ -235,7 +241,12 @@ export default function Menu() {
           }}
           trigger={["click"]}
         >
-          <div className="cursor-pointer mt-[10px] p-[2px] rounded-full hover:bg-muted">
+          <div
+            className="menu-tooltip cursor-pointer mt-[10px] p-[2px] rounded-full hover:bg-muted"
+            data-menu-tooltip={t("Cuenta")}
+            aria-label={t("Cuenta")}
+            title={t("Cuenta")}
+          >
             <Avatar
               src={agent?.picture || userMetadata?.picture}
               fallback={(

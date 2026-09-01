@@ -7,6 +7,7 @@ interface LinkButtonProps {
   children: ReactNode;
   isActive?: boolean;
   className?: string; // For margin tops etc
+  tooltip?: boolean;
 }
 
 export function LinkButton({
@@ -15,11 +16,19 @@ export function LinkButton({
   children,
   isActive,
   className = "",
+  tooltip = false,
 }: LinkButtonProps) {
   className = className + (isActive ? " bg-muted" : "");
 
   return (
-    <Link to={to} hash={(prevHash) => prevHash!} title={title}>
+    <Link
+      to={to}
+      hash={(prevHash) => prevHash!}
+      aria-label={title}
+      data-menu-tooltip={tooltip ? title : undefined}
+      className={tooltip ? "menu-tooltip" : undefined}
+      title={tooltip ? undefined : title}
+    >
       <div className={`p-[8px] rounded-full hover:bg-muted ${className}`}>
         {children}
       </div>

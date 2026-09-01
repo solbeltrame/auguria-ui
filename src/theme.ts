@@ -1,4 +1,5 @@
 import type { AccentColor } from "./stores/uiSlice";
+import "./auguria-theme.css";
 
 type AccentPalette = {
   swatch: string;

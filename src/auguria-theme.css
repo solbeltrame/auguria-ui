@@ -1,0 +1,98 @@
+:root {
+  --auguria-font-ui:
+    "Inter", "Avenir Next", "Segoe UI Variable", "Segoe UI", system-ui,
+    sans-serif;
+}
+
+html,
+body {
+  font-family: var(--auguria-font-ui) !important;
+  font-optical-sizing: auto;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+.menu-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu-tooltip::before,
+.menu-tooltip::after {
+  position: absolute;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.menu-tooltip::before {
+  top: 50%;
+  left: calc(100% + 6px);
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 5px solid var(--popover);
+  content: "";
+  transform: translate(-4px, -50%);
+}
+
+.menu-tooltip::after {
+  top: 50%;
+  left: calc(100% + 11px);
+  width: max-content;
+  max-width: 220px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--popover);
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--foreground) 14%, transparent);
+  color: var(--popover-foreground);
+  content: attr(data-menu-tooltip);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  transform: translate(-4px, -50%);
+}
+
+.menu-tooltip:hover::before,
+.menu-tooltip:hover::after,
+.menu-tooltip:focus-visible::before,
+.menu-tooltip:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-tooltip::before,
+  .menu-tooltip::after {
+    transition: none;
+  }
+}
