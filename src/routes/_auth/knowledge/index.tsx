@@ -17,6 +17,7 @@ import {
   Copy,
   FileText,
   Globe2,
+  Info,
   Link2,
   LoaderCircle,
   Plus,
@@ -321,28 +322,14 @@ function AddSourcesModal({
         </div>
 
         <div className="mt-5 sm:mt-6">
-          <label
-            className="mb-1.5 block px-1 text-[13px] font-medium text-foreground"
-            htmlFor="knowledge-source-title"
-          >
-            {t("Título da fonte")}{" "}
-            <span className="font-normal text-muted-foreground">
-              ({t("opcional")})
-            </span>
-          </label>
           <input
             id="knowledge-source-title"
             className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-[15px] text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
             value={title}
             onChange={(event) => onTitleChange(event.target.value)}
-            placeholder={t("Ex.: Tabela de preços 2026")}
+            placeholder={t("Título da fonte (opcional)")}
             maxLength={160}
           />
-          <p className="mt-1 px-1 text-[12px] text-muted-foreground">
-            {t(
-              "Esse nome aparece na lista de fontes. Ao adicionar várias de uma vez, você pode ajustar cada título depois.",
-            )}
-          </p>
         </div>
 
         <div className="mt-4 rounded-[24px] border-2 border-primary/60 bg-background shadow-sm transition focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_15%,transparent)]">
@@ -414,37 +401,46 @@ function AddSourcesModal({
         </div>
 
         <div
-          className="mt-4 rounded-[22px] border border-dashed border-border bg-muted/25 px-4 py-5 text-center transition hover:border-primary/50 hover:bg-primary/5 sm:py-6"
+          className="relative mt-4 cursor-pointer rounded-[22px] border border-dashed border-border bg-muted/25 px-4 py-4 text-center transition hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:py-5"
+          role="button"
+          tabIndex={0}
+          aria-label={t("Selecionar arquivos")}
           onDragOver={(event) => event.preventDefault()}
           onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          title={t(
+            "Você também pode colar uma imagem com Ctrl/Cmd+V. Limite de 20 MB por arquivo.",
+          )}
         >
-          <Upload className="mx-auto h-7 w-7 text-primary" />
-          <p className="mt-2 text-[20px] font-medium text-foreground sm:text-[22px]">
+          <Upload className="mx-auto h-6 w-6 text-primary" />
+          <p className="mt-1.5 text-[16px] font-medium text-foreground sm:text-[17px]">
             {t("ou solte arquivos")}
           </p>
-          <p className="mt-1 text-[14px] text-muted-foreground">
+          <p className="mt-0.5 inline-flex items-center gap-1 text-[12px] text-muted-foreground">
             {t("PDF, imagens, documentos, áudio e outros")}
-          </p>
-          <p className="mt-1 text-[12px] text-muted-foreground">
-            {t("Você também pode colar uma imagem com Ctrl/Cmd+V")}
-          </p>
-          <label className="mx-auto mt-3 inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 text-[14px] font-medium text-foreground shadow-sm transition hover:border-primary hover:text-primary sm:mt-4">
-            <Upload className="h-4 w-4" />
-            {t("Enviar arquivos")}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept={ACCEPTED_FILES}
-              className="sr-only"
-              onChange={(event) =>
-                onSelectFiles(Array.from(event.target.files || []))
-              }
+            <Info
+              className="h-3.5 w-3.5"
+              aria-label={t(
+                "Você também pode colar uma imagem com Ctrl/Cmd+V. Limite de 20 MB por arquivo.",
+              )}
             />
-          </label>
-          <p className="mt-3 text-[12px] text-muted-foreground">
-            {t("Até 20 MB por arquivo")}
           </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ACCEPTED_FILES}
+            className="sr-only"
+            onChange={(event) =>
+              onSelectFiles(Array.from(event.target.files || []))
+            }
+          />
         </div>
 
         {!!files.length && (
