@@ -41,6 +41,7 @@ function AppLayout() {
   const location = useLocation();
   const pathname = location.pathname;
   const isStatsRoute = pathname.startsWith("/stats");
+  const isKnowledgeRoute = pathname.startsWith("/knowledge");
 
   const [isHoveringFiles, setIsHoveringFiles] = useState(false);
 
@@ -58,13 +59,13 @@ function AppLayout() {
   useEffect(() => {
     const convId = location.hash;
     setActiveConv(convId);
-  }, [location.hash]);
+  }, [location.hash, setActiveConv]);
 
   console.log("--------");
   console.log("active org ", activeOrgId);
   console.log("active conv", activeConvId);
 
-  const showCenterPanel = activeConvId || isStatsRoute;
+  const showCenterPanel = !isKnowledgeRoute && (activeConvId || isStatsRoute);
 
   return (
     <div
@@ -83,8 +84,11 @@ function AppLayout() {
       <div
         ref={panelRef}
         className={
-          "flex-col overflow-hidden md:border-r border-border bg-background text-foreground col-span-2 md:col-span-1 relative " +
-          (showCenterPanel ? "hidden md:flex" : "flex")
+          "flex-col overflow-hidden md:border-r border-border bg-background text-foreground relative " +
+          (showCenterPanel ? "hidden md:flex" : "flex") +
+          (isKnowledgeRoute
+            ? " col-span-2 md:col-span-2"
+            : " col-span-2 md:col-span-1")
         }
       >
         <Outlet />
@@ -96,11 +100,13 @@ function AppLayout() {
       <div
         className={
           "flex-col min-w-0 relative overflow-hidden col-span-full md:col-span-1" +
-          (isStatsRoute
-            ? " flex bg-muted"
-            : activeConvId
-              ? " flex bg-chat"
-              : " hidden md:flex bg-muted")
+          (isKnowledgeRoute
+            ? " hidden"
+            : isStatsRoute
+              ? " flex bg-muted"
+              : activeConvId
+                ? " flex bg-chat"
+                : " hidden md:flex bg-muted")
         }
         onDragEnter={() => setIsHoveringFiles(true)}
         onDrop={() => setIsHoveringFiles(false)}

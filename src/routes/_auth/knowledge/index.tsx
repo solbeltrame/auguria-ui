@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from "react";
+import type { DragEvent, FormEvent, ReactNode, RefObject } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   BookOpenText,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   FileText,
+  Globe2,
   Link2,
   LoaderCircle,
   Plus,
-  RotateCcw,
+  RefreshCcw,
   Save,
   Sparkles,
   Trash2,
+  Type,
   Upload,
+  X,
   XCircle,
 } from "lucide-react";
-import SectionBody from "@/components/SectionBody";
 import SectionHeader from "@/components/SectionHeader";
-import Button from "@/components/Button";
 import Switch from "@/components/Switch";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useCurrentAgent } from "@/queries/useAgents";
@@ -44,6 +48,15 @@ export const Route = createFileRoute("/_auth/knowledge/")({
 const ACCEPTED_FILES =
   ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.md,.json,.xml,.html,.rtf,.sql,.png,.jpg,.jpeg,.gif,.bmp,.tif,.tiff,.webp,.mp3,.wav,.m4a,.ogg,.mp4,.mov,.webm";
 const MAX_INSTRUCTIONS = 60_000;
+const SOURCE_EXAMPLES = [
+  "uma tabela de preços",
+  "um manual de usuário",
+  "um script de atendimento",
+  "as políticas da sua empresa",
+  "um catálogo de produtos",
+];
+
+type SourceMode = "text" | "sites";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -56,37 +69,336 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1_000_000).toFixed(1)} MB`;
 }
 
+function formatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium",
+  }).format(date);
+}
+
 function statusLabel(
   document: KnowledgeDocumentRow,
   translate: (value: string) => string,
-) {
+): ReactNode {
   switch (document.status) {
     case "ready":
       return (
-        <span className="inline-flex items-center gap-1 text-primary">
-          <CheckCircle2 className="h-4 w-4" />
+        <span className="inline-flex items-center gap-1 text-[12px] text-primary">
+          <CheckCircle2 className="h-3.5 w-3.5" />
           {translate("Pronto")}
         </span>
       );
     case "processing":
       return (
-        <span className="inline-flex items-center gap-1 text-muted-foreground">
-          <LoaderCircle className="h-4 w-4 animate-spin" />
+        <span className="inline-flex items-center gap-1 text-[12px] text-muted-foreground">
+          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
           {translate("Processando")}
         </span>
       );
     case "error":
       return (
-        <span className="inline-flex items-center gap-1 text-destructive">
-          <XCircle className="h-4 w-4" />
+        <span className="inline-flex items-center gap-1 text-[12px] text-destructive">
+          <XCircle className="h-3.5 w-3.5" />
           {translate("Erro")}
         </span>
       );
     default:
       return (
-        <span className="text-muted-foreground">{translate("Na fila")}</span>
+        <span className="text-[12px] text-muted-foreground">
+          {translate("Na fila")}
+        </span>
       );
   }
+}
+
+function sourceIcon(document: KnowledgeDocumentRow, className = "h-5 w-5") {
+  return document.source_type === "url" ? (
+    <Link2 className={`${className} text-primary`} />
+  ) : (
+    <FileText className={`${className} text-primary`} />
+  );
+}
+
+function parseSiteUrls(value: string): string[] {
+  const urls = value
+    .split(/[\s,]+/)
+    .map((item) => item.replace(/[)\]}>,.;]+$/g, ""))
+    .filter(Boolean)
+    .filter((item) => {
+      try {
+        const url = new URL(item);
+        return url.protocol === "http:" || url.protocol === "https:";
+      } catch {
+        return false;
+      }
+    });
+  return [...new Set(urls)];
+}
+
+function titleForUrl(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "Site";
+  }
+}
+
+type AddSourcesModalProps = {
+  isOpen: boolean;
+  mode: SourceMode;
+  draft: string;
+  files: File[];
+  error?: string;
+  isBusy: boolean;
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  onClose: () => void;
+  onModeChange: (mode: SourceMode) => void;
+  onDraftChange: (value: string) => void;
+  onSelectFiles: (files: File[]) => void;
+  onRemoveFile: (index: number) => void;
+  onSubmit: () => void;
+};
+
+function AddSourcesModal({
+  isOpen,
+  mode,
+  draft,
+  files,
+  error,
+  isBusy,
+  fileInputRef,
+  onClose,
+  onModeChange,
+  onDraftChange,
+  onSelectFiles,
+  onRemoveFile,
+  onSubmit,
+}: AddSourcesModalProps) {
+  const { translate: t } = useTranslation();
+  const [exampleIndex, setExampleIndex] = useState(0);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setExampleIndex(0);
+    const timer = window.setInterval(() => {
+      setExampleIndex((current) => (current + 1) % SOURCE_EXAMPLES.length);
+    }, 2300);
+    return () => window.clearInterval(timer);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) setModeMenuOpen(false);
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const hasInput = Boolean(draft.trim() || files.length);
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    onSelectFiles(Array.from(event.dataTransfer.files));
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-sources-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="flex max-h-[min(790px,calc(100dvh-32px))] w-full max-w-[840px] flex-col overflow-y-auto rounded-[28px] border border-border bg-background p-5 shadow-2xl sm:p-8"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 text-center">
+            <h2
+              id="add-sources-title"
+              className="text-[27px] font-medium tracking-tight text-foreground sm:text-[34px]"
+            >
+              {t("Ensine o agente com fontes como")}
+            </h2>
+            <div
+              className="mt-1 min-h-[34px] bg-gradient-to-r from-violet-500 via-sky-500 to-emerald-500 bg-clip-text text-[23px] font-medium text-transparent sm:text-[28px]"
+              aria-live="polite"
+            >
+              {t(SOURCE_EXAMPLES[exampleIndex])}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            title={t("Fechar")}
+            aria-label={t("Fechar")}
+            onClick={onClose}
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="mt-8 rounded-[26px] border-2 border-primary/60 bg-background shadow-sm transition focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_15%,transparent)]">
+          <textarea
+            autoFocus
+            className="min-h-[145px] w-full resize-none rounded-t-[24px] bg-transparent px-5 py-4 text-[16px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
+            value={draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+            placeholder={
+              mode === "sites"
+                ? t("Cole um ou mais links públicos, um por linha")
+                : t(
+                    "Cole aqui informações, regras, políticas ou instruções para o agente",
+                  )
+            }
+            aria-label={
+              mode === "sites" ? t("Links das fontes") : t("Texto da fonte")
+            }
+          />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+            <div className="relative">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-[14px] font-medium text-foreground transition hover:bg-muted"
+                aria-haspopup="menu"
+                aria-expanded={modeMenuOpen}
+                onClick={() => setModeMenuOpen((current) => !current)}
+              >
+                {mode === "sites" ? (
+                  <Globe2 className="h-4 w-4 text-primary" />
+                ) : (
+                  <Type className="h-4 w-4 text-primary" />
+                )}
+                {mode === "sites" ? t("Sites") : t("Texto")}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+              {modeMenuOpen && (
+                <div
+                  className="absolute bottom-[calc(100%+8px)] left-0 z-10 min-w-[150px] rounded-xl border border-border bg-background p-1 shadow-xl"
+                  role="menu"
+                >
+                  {(["text", "sites"] as SourceMode[]).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[14px] transition hover:bg-muted ${mode === option ? "bg-primary/10 text-primary" : "text-foreground"}`}
+                      role="menuitem"
+                      onClick={() => {
+                        onModeChange(option);
+                        setModeMenuOpen(false);
+                      }}
+                    >
+                      {option === "sites" ? (
+                        <Globe2 className="h-4 w-4" />
+                      ) : (
+                        <Type className="h-4 w-4" />
+                      )}
+                      {option === "sites" ? t("Sites") : t("Texto")}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <span className="text-[12px] text-muted-foreground">
+              {mode === "sites"
+                ? t("Um link por linha")
+                : t("Texto livre para ensinar o agente")}
+            </span>
+          </div>
+        </div>
+
+        <div
+          className="mt-5 rounded-[24px] border border-dashed border-border bg-muted/25 px-5 py-8 text-center transition hover:border-primary/50 hover:bg-primary/5"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={handleDrop}
+        >
+          <Upload className="mx-auto h-7 w-7 text-primary" />
+          <p className="mt-3 text-[22px] font-medium text-foreground">
+            {t("ou solte arquivos")}
+          </p>
+          <p className="mt-1 text-[14px] text-muted-foreground">
+            {t("PDF, imagens, documentos, áudio e outros")}
+          </p>
+          <label className="mx-auto mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 text-[14px] font-medium text-foreground shadow-sm transition hover:border-primary hover:text-primary">
+            <Upload className="h-4 w-4" />
+            {t("Enviar arquivos")}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={ACCEPTED_FILES}
+              className="sr-only"
+              onChange={(event) =>
+                onSelectFiles(Array.from(event.target.files || []))
+              }
+            />
+          </label>
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            {t("Até 20 MB por arquivo")}
+          </p>
+        </div>
+
+        {!!files.length && (
+          <div className="mt-4 rounded-2xl border border-border bg-muted/20 p-3">
+            <div className="flex flex-col gap-1">
+              {files.map((file, index) => (
+                <div
+                  key={`${file.name}-${file.lastModified}-${index}`}
+                  className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-[13px] text-foreground"
+                >
+                  <FileText className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                  <span className="shrink-0 text-muted-foreground">
+                    {formatBytes(file.size)}
+                  </span>
+                  <button
+                    type="button"
+                    className="rounded-full p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    title={t("Remover arquivo")}
+                    aria-label={`${t("Remover arquivo")} ${file.name}`}
+                    onClick={() => onRemoveFile(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <p className="mt-4 whitespace-pre-line rounded-xl bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            className="rounded-full px-5 py-2.5 text-[14px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            onClick={onClose}
+          >
+            {t("Cancelar")}
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-[14px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-default disabled:opacity-50"
+            disabled={isBusy || !hasInput}
+            onClick={onSubmit}
+          >
+            {isBusy ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {isBusy ? t("Interpretando...") : t("Adicionar fontes")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function KnowledgePage() {
@@ -107,13 +419,13 @@ function KnowledgePage() {
   const [baseName, setBaseName] = useState("");
   const [baseDescription, setBaseDescription] = useState("");
   const [showBaseForm, setShowBaseForm] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
+  const [sourceMode, setSourceMode] = useState<SourceMode>("text");
+  const [sourceDraft, setSourceDraft] = useState("");
+  const [sourceFiles, setSourceFiles] = useState<File[]>([]);
+  const [showAddSources, setShowAddSources] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [generatedContext, setGeneratedContext] = useState("");
-  const [expandedSourceId, setExpandedSourceId] = useState<string>();
-  const [showLinkForm, setShowLinkForm] = useState(false);
-  const [linkUrl, setLinkUrl] = useState("");
-  const [linkTitle, setLinkTitle] = useState("");
   const [uploadError, setUploadError] = useState<string>();
   const [feedback, setFeedback] = useState<string>();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -123,6 +435,13 @@ function KnowledgePage() {
   const selectedBase = bases?.find((base) => base.id === selectedBaseId);
   const { data: documents, isLoading: documentsLoading } =
     useKnowledgeDocuments(selectedBase?.id);
+  const selectedDocument = documents?.find(
+    (document) => document.id === selectedDocumentId,
+  );
+  const addSourcesBusy =
+    uploadDocument.isPending ||
+    createLink.isPending ||
+    synthesizeBase.isPending;
 
   useEffect(() => {
     if (!bases?.length) {
@@ -139,27 +458,42 @@ function KnowledgePage() {
     hydratedBaseId.current = selectedBase.id;
     setInstructions(selectedBase.instructions || "");
     setGeneratedContext(selectedBase.generated_context || "");
-    setExpandedSourceId(undefined);
+    setSelectedDocumentId(undefined);
     setUploadError(undefined);
     setFeedback(undefined);
   }, [selectedBase]);
 
   useEffect(() => {
     if (
-      expandedSourceId &&
-      !documents?.some((document) => document.id === expandedSourceId)
+      selectedDocumentId &&
+      !documents?.some((document) => document.id === selectedDocumentId)
     ) {
-      setExpandedSourceId(undefined);
+      setSelectedDocumentId(undefined);
     }
-  }, [documents, expandedSourceId]);
+  }, [documents, selectedDocumentId]);
 
   const consolidate = async (baseId: string) => {
     const base = await synthesizeBase.mutateAsync(baseId);
-    setInstructions(base.instructions || "");
     setGeneratedContext(base.generated_context || "");
   };
 
-  const handleCreateBase = (event: React.FormEvent<HTMLFormElement>) => {
+  const openAddSources = () => {
+    setSourceMode("text");
+    setSourceDraft("");
+    setSourceFiles([]);
+    setUploadError(undefined);
+    setShowAddSources(true);
+  };
+
+  const closeAddSources = () => {
+    if (addSourcesBusy) return;
+    setShowAddSources(false);
+    setSourceDraft("");
+    setSourceFiles([]);
+    setUploadError(undefined);
+  };
+
+  const handleCreateBase = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const name = baseName.trim();
     if (!name || !isAdmin) return;
@@ -210,11 +544,13 @@ function KnowledgePage() {
       !window.confirm(
         `${t("Excluir a base e suas fontes vinculadas")}? “${selectedBase.name}”`,
       )
-    )
+    ) {
       return;
+    }
     deleteBase.mutate(selectedBase.id, {
       onSuccess: () => {
         setSelectedBaseId(undefined);
+        setSelectedDocumentId(undefined);
         setFeedback(t("Base excluída."));
       },
       onError: (error) => setUploadError(errorMessage(error)),
@@ -231,6 +567,7 @@ function KnowledgePage() {
           setInstructions(base.instructions || "");
           setFeedback(t("Instruções manuais salvas."));
         },
+        onError: (error) => setUploadError(errorMessage(error)),
       },
     );
   };
@@ -247,62 +584,88 @@ function KnowledgePage() {
     }
   };
 
-  const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedFiles(Array.from(event.target.files || []));
+  const handleSelectFiles = (files: File[]) => {
+    setSourceFiles((current) => {
+      const next = [...current, ...files];
+      return next.filter(
+        (file, index) =>
+          next.findIndex(
+            (candidate) =>
+              candidate.name === file.name &&
+              candidate.size === file.size &&
+              candidate.lastModified === file.lastModified,
+          ) === index,
+      );
+    });
     setUploadError(undefined);
-    setFeedback(undefined);
   };
 
-  const handleUpload = async () => {
-    if (!selectedBase || !selectedFiles.length) return;
+  const handleAddSources = async () => {
+    if (!selectedBase || !isAdmin) return;
+    const draft = sourceDraft.trim();
+    const files = [...sourceFiles];
+    const urls = sourceMode === "sites" ? parseSiteUrls(draft) : [];
+
+    if (sourceMode === "sites" && draft && !urls.length) {
+      setUploadError(t("Digite pelo menos um link público válido."));
+      return;
+    }
+
+    if (sourceMode === "text" && draft) {
+      files.push(
+        new File([draft], `texto-colado-${Date.now()}.txt`, {
+          type: "text/plain",
+        }),
+      );
+    }
+
+    if (!files.length && !urls.length) {
+      setUploadError(t("Adicione um texto, um link ou pelo menos um arquivo."));
+      return;
+    }
 
     setUploadError(undefined);
     setFeedback(undefined);
     const failures: string[] = [];
-    let uploaded = false;
-    for (const file of selectedFiles) {
+    let successCount = 0;
+
+    for (const file of files) {
       try {
         await uploadDocument.mutateAsync({ baseId: selectedBase.id, file });
-        uploaded = true;
+        successCount += 1;
       } catch (error) {
         failures.push(`${file.name}: ${errorMessage(error)}`);
       }
     }
-    setSelectedFiles([]);
-    if (fileInput.current) fileInput.current.value = "";
 
-    if (uploaded) {
+    for (const url of urls) {
+      try {
+        await createLink.mutateAsync({
+          baseId: selectedBase.id,
+          url,
+          title: titleForUrl(url),
+        });
+        successCount += 1;
+      } catch (error) {
+        failures.push(`${url}: ${errorMessage(error)}`);
+      }
+    }
+
+    if (successCount > 0) {
       try {
         await consolidate(selectedBase.id);
-        setFeedback(t("Arquivos processados e contexto atualizado."));
+        setFeedback(t("Fontes adicionadas e contexto atualizado."));
       } catch (error) {
         failures.push(
           t("Não foi possível consolidar o contexto: ") + errorMessage(error),
         );
       }
+      setShowAddSources(false);
+      setSourceDraft("");
+      setSourceFiles([]);
     }
-    if (failures.length) setUploadError(failures.join("\n"));
-  };
 
-  const handleAddLink = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!selectedBase || !linkUrl.trim()) return;
-    setUploadError(undefined);
-    setFeedback(undefined);
-    try {
-      await createLink.mutateAsync({
-        baseId: selectedBase.id,
-        url: linkUrl.trim(),
-        title: linkTitle.trim() || undefined,
-      });
-      setLinkUrl("");
-      setLinkTitle("");
-      setShowLinkForm(false);
-      await consolidate(selectedBase.id);
-      setFeedback(t("Link adicionado e contexto atualizado."));
-    } catch (error) {
-      setUploadError(errorMessage(error));
-    }
+    if (failures.length) setUploadError(failures.join("\n"));
   };
 
   const handleToggle = async (
@@ -326,8 +689,11 @@ function KnowledgePage() {
       return;
     deleteDocument.mutate(document, {
       onSuccess: () => {
+        if (selectedDocumentId === document.id)
+          setSelectedDocumentId(undefined);
         if (selectedBase) void consolidate(selectedBase.id);
       },
+      onError: (error) => setUploadError(errorMessage(error)),
     });
   };
 
@@ -337,6 +703,7 @@ function KnowledgePage() {
       onSuccess: () => {
         if (selectedBase) void consolidate(selectedBase.id);
       },
+      onError: (error) => setUploadError(errorMessage(error)),
     });
   };
 
@@ -344,480 +711,551 @@ function KnowledgePage() {
     <>
       <SectionHeader title={t("Base de conhecimento")} />
 
-      <SectionBody className="gap-6">
-        <section
-          className="flex flex-col gap-3 px-[10px]"
-          aria-labelledby="knowledge-intro"
-        >
-          <div className="flex items-start gap-3">
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
-              <BookOpenText className="h-6 w-6" />
-            </div>
-            <div>
-              <h2
-                id="knowledge-intro"
-                className="text-[16px] font-medium text-foreground"
-              >
-                {t("Conhecimento organizado por contexto")}
-              </h2>
-              <p className="mt-1">
-                {t(
-                  "Crie bases por contexto, adicione arquivos e links na lateral e vincule cada base aos agentes que devem consultá-la.",
-                )}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {!basesLoading && (
-          <section
-            className="flex flex-col gap-3 rounded-xl border border-border p-[14px]"
-            aria-labelledby="knowledge-bases"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2
-                  id="knowledge-bases"
-                  className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground"
-                >
-                  {t("Bases")}
-                </h2>
-                <p className="mt-1 text-[13px]">
-                  {t(
-                    "Uma base pode ser compartilhada por vários agentes. Sem vínculo explícito, ela não entra no atendimento.",
-                  )}
+      <div className="section-body h-full w-full overflow-y-auto [scrollbar-gutter:stable]">
+        <div className="flex min-h-full flex-col">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="rounded-2xl bg-primary/10 p-2.5 text-primary">
+                <BookOpenText className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  {t("Conhecimento do agente")}
+                </p>
+                <p className="truncate text-[19px] font-medium text-foreground">
+                  {selectedBase?.name || t("Nenhuma base selecionada")}
                 </p>
               </div>
-              {isAdmin && (
-                <Button
-                  type="button"
-                  className="secondary"
-                  onClick={() => setShowBaseForm((current) => !current)}
-                >
-                  <Plus className="h-4 w-4" />
-                  {t("Nova base")}
-                </Button>
-              )}
             </div>
 
-            {!!bases?.length && (
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {bases?.length ? (
                 <select
-                  className="text min-w-[220px] flex-1"
+                  className="!w-auto min-w-[170px] rounded-xl border border-border bg-background px-3 py-2 text-[14px] text-foreground !outline-none"
                   value={selectedBase?.id || ""}
-                  onChange={(event) =>
-                    setSelectedBaseId(event.target.value || undefined)
-                  }
+                  onChange={(event) => {
+                    setSelectedBaseId(event.target.value || undefined);
+                    setSelectedDocumentId(undefined);
+                  }}
                   aria-label={t("Base selecionada")}
                 >
                   {bases.map((base) => (
                     <option key={base.id} value={base.id}>
-                      {base.name} (
-                      {base.status === "active" ? t("ativa") : t("arquivada")})
+                      {base.name} —{" "}
+                      {base.status === "active" ? t("ativa") : t("arquivada")}
                     </option>
                   ))}
                 </select>
-                {selectedBase && isAdmin && (
-                  <>
-                    <Button
-                      type="button"
-                      className="secondary"
-                      loading={duplicateBase.isPending}
-                      onClick={handleDuplicateBase}
-                    >
-                      {t("Duplicar")}
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary"
-                      loading={deleteBase.isPending}
-                      onClick={handleDeleteBase}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {t("Excluir")}
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {selectedBase?.description && (
-              <p className="text-[13px] text-muted-foreground">
-                {selectedBase.description}
-              </p>
-            )}
-
-            {showBaseForm && isAdmin && (
-              <form
-                className="grid gap-2 rounded-lg border border-dashed border-primary/30 p-3 md:grid-cols-[1fr_1fr_auto]"
-                onSubmit={handleCreateBase}
-              >
-                <input
-                  className="text"
-                  value={baseName}
-                  onChange={(event) => setBaseName(event.target.value)}
-                  placeholder={t("Nome da base")}
-                  maxLength={120}
-                  required
-                />
-                <input
-                  className="text"
-                  value={baseDescription}
-                  onChange={(event) => setBaseDescription(event.target.value)}
-                  placeholder={t("Descrição opcional")}
-                  maxLength={500}
-                />
-                <Button
-                  type="submit"
-                  className="primary"
-                  loading={createBase.isPending}
-                  invalid={!baseName.trim()}
+              ) : null}
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-[14px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
+                  onClick={() => setShowBaseForm((current) => !current)}
+                  disabled={createBase.isPending}
                 >
-                  {t("Criar base")}
-                </Button>
-              </form>
-            )}
-
-            {!bases?.length && (
-              <p className="text-[14px] text-muted-foreground">
-                {isAdmin
-                  ? t(
-                      "Crie a primeira base para começar a organizar o conhecimento.",
-                    )
-                  : t("Ainda não há uma base de conhecimento cadastrada.")}
-              </p>
-            )}
-          </section>
-        )}
-
-        {selectedBase && (
-          <div className="grid min-h-0 gap-6 lg:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.6fr)]">
-            <section
-              className="flex min-w-0 flex-col gap-3"
-              aria-labelledby="knowledge-sources"
-            >
-              <div className="flex items-center justify-between px-[10px]">
-                <div>
-                  <h2
-                    id="knowledge-sources"
-                    className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground"
-                  >
-                    {t("Fontes")}
-                  </h2>
-                  <p className="mt-1 text-[13px]">
-                    {t(
-                      "Fontes desta base. Ative só o que deve entrar no contexto.",
-                    )}
-                  </p>
-                </div>
-                {documentsLoading && (
-                  <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-
-              {isAdmin && (
-                <div className="rounded-xl border border-border p-[14px]">
-                  <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-primary/40 px-4 py-5 text-center hover:bg-primary/5">
-                    <Upload className="h-6 w-6 text-primary" />
-                    <span className="text-[14px] font-medium text-foreground">
-                      {t("Adicionar arquivos")}
-                    </span>
-                    <span className="text-[12px] text-muted-foreground">
-                      {t("PDF, Office, imagens, áudio e texto; até 20 MB")}
-                    </span>
-                    <input
-                      ref={fileInput}
-                      type="file"
-                      multiple
-                      accept={ACCEPTED_FILES}
-                      className="hidden"
-                      onChange={handleFiles}
-                    />
-                  </label>
-                  {!!selectedFiles.length && (
-                    <div className="mt-3 flex flex-col gap-1">
-                      {selectedFiles.map((file) => (
-                        <div
-                          key={`${file.name}-${file.lastModified}`}
-                          className="flex items-center gap-2 text-[13px] text-foreground"
-                        >
-                          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <span className="min-w-0 flex-1 truncate">
-                            {file.name}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {formatBytes(file.size)}
-                          </span>
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        className="primary mt-2"
-                        loading={
-                          uploadDocument.isPending || synthesizeBase.isPending
-                        }
-                        onClick={() => void handleUpload()}
-                      >
-                        {t("Enviar e interpretar")}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  <Plus className="h-4 w-4" />
+                  {t("Nova base")}
+                </button>
               )}
-
-              {isAdmin && (
-                <div className="rounded-xl border border-border p-[14px]">
+              {selectedBase && isAdmin && (
+                <>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 text-left text-[14px] font-medium text-foreground"
-                    onClick={() => setShowLinkForm((current) => !current)}
+                    className="rounded-full border border-border px-4 py-2 text-[14px] font-medium text-foreground transition hover:border-primary hover:text-primary disabled:opacity-50"
+                    onClick={handleDuplicateBase}
+                    disabled={duplicateBase.isPending}
                   >
-                    <Plus className="h-4 w-4 text-primary" />
-                    {t("Adicionar link")}
+                    {duplicateBase.isPending
+                      ? t("Duplicando...")
+                      : t("Duplicar")}
                   </button>
-                  {showLinkForm && (
-                    <form
-                      className="mt-3 flex flex-col gap-2"
-                      onSubmit={handleAddLink}
+                  <button
+                    type="button"
+                    className="rounded-full border border-destructive/30 px-4 py-2 text-[14px] font-medium text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
+                    onClick={handleDeleteBase}
+                    disabled={deleteBase.isPending}
+                  >
+                    <Trash2 className="mr-1 inline h-4 w-4" />
+                    {t("Excluir")}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {showBaseForm && isAdmin && (
+            <form
+              className="!m-0 !flex !grow-0 !flex-col !gap-3 border-b border-border bg-muted/20 px-5 py-4 md:!flex-row"
+              onSubmit={handleCreateBase}
+            >
+              <input
+                className="text rounded-xl border border-border px-3 py-2 !outline-none"
+                value={baseName}
+                onChange={(event) => setBaseName(event.target.value)}
+                placeholder={t("Nome da base")}
+                maxLength={120}
+                required
+              />
+              <input
+                className="text rounded-xl border border-border px-3 py-2 !outline-none"
+                value={baseDescription}
+                onChange={(event) => setBaseDescription(event.target.value)}
+                placeholder={t("Descrição opcional")}
+                maxLength={500}
+              />
+              <button
+                type="submit"
+                className="rounded-full bg-primary px-5 py-2 text-[14px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
+                disabled={createBase.isPending || !baseName.trim()}
+              >
+                {createBase.isPending ? t("Criando...") : t("Criar base")}
+              </button>
+            </form>
+          )}
+
+          {basesLoading ? (
+            <div className="flex flex-1 items-center justify-center p-10">
+              <LoaderCircle className="h-7 w-7 animate-spin text-primary" />
+            </div>
+          ) : selectedBase ? (
+            <div className="grid min-h-[calc(100dvh-145px)] flex-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
+              <aside className="flex min-h-0 flex-col border-b border-border bg-sidebar/30 lg:border-b-0 lg:border-r">
+                <div className="border-b border-border px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-[20px] font-medium text-foreground">
+                        {t("Fontes")}
+                      </h2>
+                      <p className="mt-1 text-[13px] text-muted-foreground">
+                        {documents?.length || 0} {t("fonte(s) nesta base")}
+                      </p>
+                    </div>
+                    {documentsLoading && (
+                      <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-4 py-2.5 text-[14px] font-medium text-primary transition hover:bg-primary/10"
+                      onClick={openAddSources}
                     >
-                      <input
-                        className="text"
-                        type="url"
-                        value={linkUrl}
-                        onChange={(event) => setLinkUrl(event.target.value)}
-                        placeholder="https://exemplo.com/ajuda"
-                        required
-                      />
-                      <input
-                        className="text"
-                        value={linkTitle}
-                        onChange={(event) => setLinkTitle(event.target.value)}
-                        placeholder={t("Título opcional")}
-                        maxLength={255}
-                      />
-                      <Button
-                        type="submit"
-                        className="primary"
-                        loading={
-                          createLink.isPending || synthesizeBase.isPending
-                        }
-                        invalid={!linkUrl.trim()}
-                      >
-                        {t("Adicionar e interpretar")}
-                      </Button>
-                    </form>
+                      <Plus className="h-4 w-4" />
+                      {t("Adicionar fontes")}
+                    </button>
                   )}
                 </div>
-              )}
 
-              <div className="flex flex-col gap-1">
-                {documents?.map((document) => {
-                  const active = document.active !== false;
-                  const expanded = expandedSourceId === document.id;
-                  const isLink = document.source_type === "url";
-                  return (
-                    <div
-                      key={document.id}
-                      className="rounded-xl border border-border"
-                    >
-                      <div className="flex items-center gap-2 px-3 py-2">
+                <div className="border-b border-border px-3 py-3">
+                  <button
+                    type="button"
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${!selectedDocumentId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
+                    onClick={() => setSelectedDocumentId(undefined)}
+                  >
+                    <BookOpenText className="h-5 w-5 shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-medium">
+                        {t("Contexto consolidado")}
+                      </span>
+                      <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                        {t("Visão geral da base")}
+                      </span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+                  {!documentsLoading && !documents?.length && (
+                    <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center">
+                      <FileText className="mx-auto h-7 w-7 text-muted-foreground" />
+                      <p className="mt-3 text-[14px] font-medium text-foreground">
+                        {t("Nenhuma fonte adicionada ainda")}
+                      </p>
+                      <p className="mt-1 text-[12px] text-muted-foreground">
+                        {t("Adicione arquivos, texto ou sites para começar.")}
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1.5">
+                    {documents?.map((document) => {
+                      const active = document.active !== false;
+                      const selected = selectedDocumentId === document.id;
+                      return (
+                        <div
+                          key={document.id}
+                          className={`flex items-center gap-2 rounded-xl border px-2 py-2 transition ${selected ? "border-primary/30 bg-primary/10" : "border-transparent hover:border-border hover:bg-muted/60"}`}
+                        >
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                            aria-expanded={selected}
+                            onClick={() => setSelectedDocumentId(document.id)}
+                          >
+                            <span className="shrink-0">
+                              {sourceIcon(document)}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                                <span className="truncate text-[14px] font-medium text-foreground">
+                                  {document.file_name}
+                                </span>
+                              </span>
+                              <span className="mt-1 block pl-4">
+                                {statusLabel(document, t)}
+                              </span>
+                            </span>
+                            <ChevronRight
+                              className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${selected ? "rotate-90" : ""}`}
+                            />
+                          </button>
+                          <div
+                            className="shrink-0"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <Switch
+                              checked={active}
+                              onCheckedChange={(checked) =>
+                                void handleToggle(document, checked)
+                              }
+                              disabled={!isAdmin || updateDocument.isPending}
+                              aria-label={
+                                active ? t("Fonte ativa") : t("Fonte inativa")
+                              }
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </aside>
+
+              <main className="flex min-h-0 min-w-0 flex-col bg-background">
+                {selectedDocument ? (
+                  <div className="flex min-h-0 flex-1 flex-col">
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
+                      <div className="flex min-w-0 items-center gap-3">
                         <button
                           type="button"
-                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                          onClick={() =>
-                            setExpandedSourceId(
-                              expanded ? undefined : document.id,
-                            )
-                          }
-                          aria-expanded={expanded}
+                          className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          title={t("Voltar para o contexto")}
+                          aria-label={t("Voltar para o contexto")}
+                          onClick={() => setSelectedDocumentId(undefined)}
                         >
-                          <ChevronDown
-                            className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "" : "-rotate-90"}`}
-                          />
-                          {isLink ? (
-                            <Link2 className="h-4 w-4 shrink-0 text-primary" />
-                          ) : (
-                            <FileText className="h-4 w-4 shrink-0 text-primary" />
-                          )}
-                          <span className="min-w-0 truncate text-[14px] text-foreground">
-                            {document.file_name}
-                          </span>
+                          <ArrowLeft className="h-5 w-5" />
                         </button>
-                        <div onClick={(event) => event.stopPropagation()}>
-                          <Switch
-                            checked={active}
-                            onCheckedChange={(checked) =>
-                              void handleToggle(document, checked)
-                            }
-                            disabled={!isAdmin || updateDocument.isPending}
-                            aria-label={
-                              active ? t("Fonte ativa") : t("Fonte inativa")
-                            }
-                          />
+                        <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                          {sourceIcon(selectedDocument, "h-5 w-5")}
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="truncate text-[20px] font-medium text-foreground">
+                            {selectedDocument.file_name}
+                          </h2>
+                          <div className="mt-1 flex flex-wrap items-center gap-3">
+                            {statusLabel(selectedDocument, t)}
+                            <span className="text-[12px] text-muted-foreground">
+                              {formatBytes(selectedDocument.file_size)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      {expanded && (
-                        <div className="flex flex-col gap-2 border-t border-border px-3 py-3 text-[12px] text-muted-foreground">
-                          {isLink && document.source_url && (
-                            <a
-                              className="break-all text-primary underline"
-                              href={document.source_url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {document.source_url}
-                            </a>
-                          )}
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span>{formatBytes(document.file_size)}</span>
-                            {statusLabel(document, t)}
-                          </div>
-                          {document.error_message && (
-                            <div className="text-destructive">
-                              {document.error_message}
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={selectedDocument.active !== false}
+                          onCheckedChange={(checked) =>
+                            void handleToggle(selectedDocument, checked)
+                          }
+                          disabled={!isAdmin || updateDocument.isPending}
+                          aria-label={
+                            selectedDocument.active !== false
+                              ? t("Fonte ativa")
+                              : t("Fonte inativa")
+                          }
+                        />
+                        {selectedDocument.status === "error" && isAdmin && (
+                          <button
+                            type="button"
+                            className="rounded-full p-2 text-muted-foreground transition hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                            title={t("Tentar processar novamente")}
+                            onClick={() =>
+                              handleReprocessDocument(selectedDocument)
+                            }
+                            disabled={reprocessDocument.isPending}
+                          >
+                            <RefreshCcw
+                              className={`h-5 w-5 ${reprocessDocument.isPending ? "animate-spin" : ""}`}
+                            />
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            className="rounded-full p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                            title={t("Excluir fonte")}
+                            onClick={() =>
+                              handleDeleteDocument(selectedDocument)
+                            }
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                      <div className="mx-auto flex max-w-[940px] flex-col gap-5">
+                        {selectedDocument.source_url && (
+                          <a
+                            className="flex items-start gap-2 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-[14px] text-primary underline decoration-primary/40 underline-offset-2 hover:bg-primary/5"
+                            href={selectedDocument.source_url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Globe2 className="mt-0.5 h-4 w-4 shrink-0 no-underline" />
+                            <span className="break-all">
+                              {selectedDocument.source_url}
+                            </span>
+                          </a>
+                        )}
+
+                        <section className="rounded-2xl border border-border p-4 sm:p-5">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-[16px] font-medium text-foreground">
+                                {t("Conteúdo interpretado")}
+                              </h3>
+                              <p className="mt-1 text-[13px] text-muted-foreground">
+                                {t(
+                                  "É este conteúdo que poderá ser consultado pelo agente.",
+                                )}
+                              </p>
                             </div>
+                            <span className="text-[12px] text-muted-foreground">
+                              {formatDate(selectedDocument.updated_at)}
+                            </span>
+                          </div>
+                          <textarea
+                            className="mt-4 min-h-[420px] w-full resize-y rounded-xl border border-border bg-muted/20 px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground outline-none"
+                            value={
+                              selectedDocument.extracted_text ||
+                              (selectedDocument.status === "processing"
+                                ? t(
+                                    "Esta fonte ainda está sendo interpretada...",
+                                  )
+                                : t("Nenhum conteúdo interpretado disponível."))
+                            }
+                            readOnly
+                            aria-label={t("Conteúdo interpretado")}
+                          />
+                        </section>
+
+                        {selectedDocument.error_message && (
+                          <p className="whitespace-pre-line rounded-xl bg-destructive/10 px-4 py-3 text-[13px] text-destructive">
+                            {selectedDocument.error_message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex min-h-0 flex-1 flex-col">
+                    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4">
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                          {t("Visão geral")}
+                        </p>
+                        <h2 className="mt-1 text-[24px] font-medium tracking-tight text-foreground">
+                          {t("Contexto consolidado")}
+                        </h2>
+                        <p className="mt-1 max-w-[680px] text-[14px] text-muted-foreground">
+                          {t(
+                            "O agente combina as fontes ativas com os ajustes manuais desta base. Em caso de conflito, os ajustes manuais têm prioridade.",
                           )}
-                          {isAdmin && (
-                            <div className="flex items-center gap-1">
-                              {document.status === "error" && (
-                                <button
-                                  type="button"
-                                  className="rounded-full p-2 hover:bg-primary/10 hover:text-primary disabled:opacity-50"
-                                  title={t("Tentar processar novamente")}
-                                  onClick={() =>
-                                    handleReprocessDocument(document)
-                                  }
-                                  disabled={reprocessDocument.isPending}
-                                >
-                                  <RotateCcw
-                                    className={`h-4 w-4 ${reprocessDocument.isPending ? "animate-spin" : ""}`}
-                                  />
-                                </button>
-                              )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-4 py-2 text-[14px] font-medium text-primary transition hover:bg-primary/10"
+                            onClick={openAddSources}
+                          >
+                            <Plus className="h-4 w-4" />
+                            {t("Adicionar fontes")}
+                          </button>
+                        )}
+                        {synthesizeBase.isPending && (
+                          <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                      <div className="mx-auto flex max-w-[940px] flex-col gap-5">
+                        <section className="rounded-2xl border border-border p-4 sm:p-5">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="h-5 w-5 text-primary" />
+                                <h3 className="text-[16px] font-medium text-foreground">
+                                  {t("Contexto automático")}
+                                </h3>
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                                  {t("somente leitura")}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-[13px] text-muted-foreground">
+                                {t(
+                                  "Gerado a partir das fontes ativas e atualizado quando elas mudam.",
+                                )}
+                              </p>
+                            </div>
+                            {isAdmin && (
                               <button
                                 type="button"
-                                className="rounded-full p-2 hover:bg-destructive/10 hover:text-destructive"
-                                title={t("Excluir fonte")}
-                                onClick={() => handleDeleteDocument(document)}
+                                className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition hover:border-primary hover:text-primary disabled:opacity-50"
+                                onClick={() => void handleSynthesize()}
+                                disabled={synthesizeBase.isPending}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <RefreshCcw
+                                  className={`h-4 w-4 ${synthesizeBase.isPending ? "animate-spin" : ""}`}
+                                />
+                                {t("Reinterpretar")}
                               </button>
+                            )}
+                          </div>
+                          <textarea
+                            className="mt-4 min-h-[300px] w-full resize-y rounded-xl border border-border bg-muted/20 px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground outline-none"
+                            value={generatedContext}
+                            readOnly
+                            placeholder={t(
+                              "Adicione fontes ativas para gerar o contexto consolidado...",
+                            )}
+                            aria-label={t("Contexto automático")}
+                          />
+                        </section>
+
+                        <section className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-[16px] font-medium text-foreground">
+                                {t("Ajustes manuais")}
+                              </h3>
+                              <p className="mt-1 max-w-[720px] text-[13px] text-muted-foreground">
+                                {t(
+                                  "Use para regras confirmadas que não estão nas fontes. Este texto tem prioridade em caso de conflito e nunca é apagado ao reinterpretar os arquivos.",
+                                )}
+                              </p>
                             </div>
+                            <span className="text-[12px] text-muted-foreground">
+                              {instructions.length.toLocaleString("pt-BR")} /{" "}
+                              {MAX_INSTRUCTIONS.toLocaleString("pt-BR")}
+                            </span>
+                          </div>
+                          <textarea
+                            className="mt-4 min-h-[190px] w-full resize-y rounded-xl border border-border bg-background px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground outline-none"
+                            value={instructions}
+                            onChange={(event) =>
+                              setInstructions(
+                                event.target.value.slice(0, MAX_INSTRUCTIONS),
+                              )
+                            }
+                            placeholder={t(
+                              "Ex.: nunca prometa prazo sem consultar a equipe...",
+                            )}
+                            maxLength={MAX_INSTRUCTIONS}
+                            readOnly={!isAdmin}
+                            aria-label={t("Ajustes manuais")}
+                          />
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-[14px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-default disabled:opacity-50"
+                              disabled={
+                                updateBase.isPending ||
+                                instructions ===
+                                  (selectedBase.instructions || "")
+                              }
+                              onClick={handleSaveInstructions}
+                            >
+                              <Save className="h-4 w-4" />
+                              {updateBase.isPending
+                                ? t("Salvando...")
+                                : t("Salvar ajustes")}
+                            </button>
                           )}
-                        </div>
-                      )}
+                        </section>
+
+                        {feedback && (
+                          <p className="rounded-xl bg-primary/10 px-4 py-3 text-[13px] text-primary">
+                            {feedback}
+                          </p>
+                        )}
+                        {uploadError && !showAddSources && (
+                          <p className="whitespace-pre-line rounded-xl bg-destructive/10 px-4 py-3 text-[13px] text-destructive">
+                            {uploadError}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  );
-                })}
-                {!documentsLoading && !documents?.length && (
-                  <div className="px-[10px] text-[14px] text-muted-foreground">
-                    {t("Nenhuma fonte adicionada ainda.")}
                   </div>
                 )}
-              </div>
-              {uploadError && (
-                <p className="whitespace-pre-line px-[10px] text-[13px] text-destructive">
-                  {uploadError}
-                </p>
-              )}
-            </section>
-
-            <section
-              className="flex min-w-0 flex-col gap-3"
-              aria-labelledby="knowledge-context"
-            >
-              <div className="flex items-center justify-between px-[10px]">
-                <div>
-                  <h2
-                    id="knowledge-context"
-                    className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground"
-                  >
-                    {t("Contexto consolidado")}
-                  </h2>
-                  <p className="mt-1 text-[13px]">
-                    {t(
-                      "A síntese muda quando as fontes ativas mudam. Seus ajustes manuais ficam separados, têm prioridade e nunca são apagados.",
-                    )}
-                  </p>
-                </div>
-                {synthesizeBase.isPending && (
-                  <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-
-              <textarea
-                className="text min-h-[360px] w-full resize-y font-mono text-[13px] leading-relaxed"
-                value={generatedContext}
-                readOnly
-                placeholder={t(
-                  "Adicione fontes ativas para gerar o contexto consolidado...",
-                )}
-              />
-
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-[14px]">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div>
-                    <h3 className="text-[14px] font-medium text-foreground">
-                      {t("Ajustes manuais")}
-                    </h3>
-                    <p className="mt-1 text-[12px] text-muted-foreground">
-                      {t(
-                        "Use para regras confirmadas que não estão nos arquivos. Em conflito, este texto tem prioridade; a síntese automática continua como referência.",
-                      )}
-                    </p>
-                  </div>
-                  <span className="text-[12px] text-muted-foreground">
-                    {instructions.length.toLocaleString("pt-BR")} /{" "}
-                    {MAX_INSTRUCTIONS.toLocaleString("pt-BR")}
-                  </span>
-                </div>
-                <textarea
-                  className="text min-h-[150px] w-full resize-y font-mono text-[13px] leading-relaxed"
-                  value={instructions}
-                  onChange={(event) =>
-                    setInstructions(
-                      event.target.value.slice(0, MAX_INSTRUCTIONS),
-                    )
-                  }
-                  placeholder={t(
-                    "Ex.: nunca prometa prazo sem consultar a equipe...",
+              </main>
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center p-6">
+              <div className="max-w-[470px] rounded-3xl border border-dashed border-border px-6 py-12 text-center">
+                <BookOpenText className="mx-auto h-10 w-10 text-primary" />
+                <h2 className="mt-4 text-[22px] font-medium text-foreground">
+                  {t("Comece uma base de conhecimento")}
+                </h2>
+                <p className="mt-2 text-[14px] text-muted-foreground">
+                  {t(
+                    "Organize arquivos, textos e sites em um contexto que pode ser compartilhado por vários agentes.",
                   )}
-                  maxLength={MAX_INSTRUCTIONS}
-                  readOnly={!isAdmin}
-                />
+                </p>
                 {isAdmin && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      className="primary"
-                      loading={updateBase.isPending}
-                      invalid={
-                        instructions === (selectedBase.instructions || "")
-                      }
-                      onClick={handleSaveInstructions}
-                    >
-                      <Save className="h-4 w-4" />
-                      {t("Salvar ajustes")}
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary"
-                      loading={synthesizeBase.isPending}
-                      onClick={() => void handleSynthesize()}
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      {t("Reinterpretar fontes")}
-                    </Button>
-                  </div>
-                )}
-                {feedback && (
-                  <p className="mt-2 text-[13px] text-primary">{feedback}</p>
+                  <button
+                    type="button"
+                    className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-[14px] font-medium text-primary-foreground transition hover:bg-primary/90"
+                    onClick={() => setShowBaseForm(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t("Criar primeira base")}
+                  </button>
                 )}
               </div>
-            </section>
-          </div>
-        )}
-      </SectionBody>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <AddSourcesModal
+        isOpen={showAddSources}
+        mode={sourceMode}
+        draft={sourceDraft}
+        files={sourceFiles}
+        error={uploadError}
+        isBusy={addSourcesBusy}
+        fileInputRef={fileInput}
+        onClose={closeAddSources}
+        onModeChange={(mode) => {
+          setSourceMode(mode);
+          setSourceDraft("");
+          setUploadError(undefined);
+        }}
+        onDraftChange={setSourceDraft}
+        onSelectFiles={handleSelectFiles}
+        onRemoveFile={(index) =>
+          setSourceFiles((current) =>
+            current.filter((_, item) => item !== index),
+          )
+        }
+        onSubmit={() => void handleAddSources()}
+      />
     </>
   );
 }
