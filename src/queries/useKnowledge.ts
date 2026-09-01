@@ -28,15 +28,16 @@ export function useKnowledgeBases() {
 
   return useQuery({
     queryKey: queryKeys.knowledge.bases(organizationId),
-    queryFn: async () =>
-      await supabase
+    queryFn: async () => {
+      const { data } = await supabase
         .from("knowledge_bases")
         .select()
         .eq("organization_id", organizationId!)
         .order("updated_at", { ascending: false })
-        .throwOnError(),
+        .throwOnError();
+      return data as KnowledgeBaseRow[];
+    },
     enabled: !!userId && !!organizationId,
-    select: (response) => response.data as KnowledgeBaseRow[],
   });
 }
 
@@ -53,10 +54,10 @@ export function useKnowledgeDocuments(baseId?: string) {
         .eq("organization_id", organizationId!)
         .order("created_at", { ascending: false });
       if (baseId) query = query.eq("knowledge_base_id", baseId);
-      return await query.throwOnError();
+      const { data } = await query.throwOnError();
+      return data as KnowledgeDocumentRow[];
     },
     enabled: !!userId && !!organizationId,
-    select: (response) => response.data as KnowledgeDocumentRow[],
     refetchInterval: (query) => {
       const rows = query.state.data as KnowledgeDocumentRow[] | undefined;
       return rows?.some(
