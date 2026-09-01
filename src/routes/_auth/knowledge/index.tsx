@@ -779,15 +779,18 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
     setFeedback(undefined);
     const failures: string[] = [];
     let successCount = 0;
+    let hasPendingSources = false;
 
     for (const file of files) {
       try {
-        await uploadDocument.mutateAsync({
+        const document = await uploadDocument.mutateAsync({
           baseId: selectedBase.id,
           file,
           title,
         });
         successCount += 1;
+        hasPendingSources ||=
+          document.status === "pending" || document.status === "processing";
       } catch (error) {
         failures.push(`${file.name}: ${errorMessage(error)}`);
       }
@@ -795,25 +798,35 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
 
     for (const url of urls) {
       try {
-        await createLink.mutateAsync({
+        const document = await createLink.mutateAsync({
           baseId: selectedBase.id,
           url,
           title: title || titleForUrl(url),
         });
         successCount += 1;
+        hasPendingSources ||=
+          document.status === "pending" || document.status === "processing";
       } catch (error) {
         failures.push(`${url}: ${errorMessage(error)}`);
       }
     }
 
     if (successCount > 0) {
-      try {
-        await consolidate(selectedBase.id);
-        setFeedback(t("Fontes adicionadas e contexto atualizado."));
-      } catch (error) {
-        failures.push(
-          t("Não foi possível consolidar o contexto: ") + errorMessage(error),
+      if (hasPendingSources) {
+        setFeedback(
+          t(
+            "Fontes adicionadas. A interpretação continua em segundo plano e o contexto será atualizado quando terminar.",
+          ),
         );
+      } else {
+        try {
+          await consolidate(selectedBase.id);
+          setFeedback(t("Fontes adicionadas e contexto atualizado."));
+        } catch (error) {
+          failures.push(
+            t("Não foi possível consolidar o contexto: ") + errorMessage(error),
+          );
+        }
       }
       setShowAddSources(false);
       setSourceDraft("");
