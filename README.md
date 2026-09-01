@@ -77,6 +77,12 @@ https://github.com/user-attachments/assets/1ef30dde-9de1-4f5a-856a-db34ca2e3063
    - **VITE_FB_LOGIN_CONFIG_ID** — Optional. Needed for Tech Provider flow.
 5. **Save and deploy**
 
+The build validates the two Supabase variables before generating `dist`. If
+either one is missing, or a production build points to `localhost`, the build
+fails instead of publishing a blank UI. Never commit these values to the
+repository; configure them in the Cloudflare Pages environment for each
+deployment context.
+
 You are live! 🚀
 
 ## Development
