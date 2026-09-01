@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DragEvent, FormEvent, ReactNode, RefObject } from "react";
+import type {
+  ClipboardEvent,
+  DragEvent,
+  FormEvent,
+  ReactNode,
+  RefObject,
+} from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -225,12 +231,53 @@ function AddSourcesModal({
     if (!isOpen) setModeMenuOpen(false);
   }, [isOpen]);
 
+  const hasUnsavedChanges = Boolean(
+    draft.trim() || title.trim() || files.length,
+  );
+  const requestClose = useCallback(() => {
+    if (isBusy) return;
+    if (
+      hasUnsavedChanges &&
+      !window.confirm(
+        t(
+          "Descartar as alterações desta fonte? O conteúdo selecionado será perdido.",
+        ),
+      )
+    ) {
+      return;
+    }
+    onClose();
+  }, [hasUnsavedChanges, isBusy, onClose, t]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      requestClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, requestClose]);
+
   if (!isOpen) return null;
 
   const hasInput = Boolean(draft.trim() || files.length);
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     onSelectFiles(Array.from(event.dataTransfer.files));
+  };
+
+  const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
+    const imageFiles = Array.from(event.clipboardData?.items || [])
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
+
+    if (!imageFiles.length) return;
+
+    event.preventDefault();
+    onSelectFiles(imageFiles);
   };
 
   return (
@@ -240,12 +287,13 @@ function AddSourcesModal({
       aria-modal="true"
       aria-labelledby="add-sources-title"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) requestClose();
       }}
     >
       <div
         className="flex max-h-[calc(100dvh-24px)] w-full max-w-[840px] flex-col overflow-hidden rounded-[28px] border border-border bg-background p-4 shadow-2xl sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
+        onPaste={handlePaste}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 text-center">
@@ -267,7 +315,7 @@ function AddSourcesModal({
             className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
             title={t("Fechar")}
             aria-label={t("Fechar")}
-            onClick={onClose}
+            onClick={requestClose}
           >
             <X className="h-6 w-6" />
           </button>
@@ -378,6 +426,9 @@ function AddSourcesModal({
           <p className="mt-1 text-[14px] text-muted-foreground">
             {t("PDF, imagens, documentos, áudio e outros")}
           </p>
+          <p className="mt-1 text-[12px] text-muted-foreground">
+            {t("Você também pode colar uma imagem com Ctrl/Cmd+V")}
+          </p>
           <label className="mx-auto mt-3 inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 text-[14px] font-medium text-foreground shadow-sm transition hover:border-primary hover:text-primary sm:mt-4">
             <Upload className="h-4 w-4" />
             {t("Enviar arquivos")}
@@ -435,7 +486,7 @@ function AddSourcesModal({
           <button
             type="button"
             className="rounded-full px-5 py-2.5 text-[14px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            onClick={onClose}
+            onClick={requestClose}
           >
             {t("Cancelar")}
           </button>
