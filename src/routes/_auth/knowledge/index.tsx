@@ -913,10 +913,10 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
 
   return (
     <>
-      <SectionHeader title={selectedBase?.name || t("Base de conhecimento")} />
+      {!selectedBase && <SectionHeader title={t("Base de conhecimento")} />}
 
-      <div className="section-body min-h-0 w-full flex-1 overflow-y-auto [scrollbar-gutter:stable] lg:overflow-hidden">
-        <div className="flex min-h-full flex-col lg:min-h-0">
+      <div className="section-body h-full min-h-0 w-full flex-1 overflow-y-auto [scrollbar-gutter:stable] lg:overflow-hidden">
+        <div className="flex h-full min-h-0 flex-col">
           {!baseId && (
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
               <div className="flex min-w-0 items-center gap-3">
@@ -1027,7 +1027,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
             </div>
           ) : selectedBase ? (
             <div
-              className="grid min-h-[calc(100dvh-145px)] flex-1 grid-cols-1 lg:min-h-0 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]"
+              className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]"
               style={
                 sourcesWidth !== null
                   ? {
@@ -1038,134 +1038,145 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
             >
               <div
                 ref={sourcesPanelRef}
-                className={`relative min-h-0 h-full ${mobileDetailOpen ? "hidden lg:block" : "block"}`}
+                className={`relative min-h-0 flex-col lg:border-r lg:border-border ${mobileDetailOpen ? "hidden lg:flex" : "flex"}`}
               >
-                <aside className="flex h-full min-h-0 flex-col border-b border-border bg-sidebar/30 lg:border-b-0 lg:border-r">
-                  <div
-                    role="separator"
-                    aria-orientation="vertical"
-                    aria-label={t("Redimensionar painel de fontes")}
-                    className="absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize lg:block"
-                    onMouseDown={handleSourcesMouseDown}
-                  />
-                  <div className="shrink-0 border-b border-border px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-[20px] font-medium text-foreground">
-                          {t("Fontes")}
-                        </h2>
-                        <p className="mt-1 text-[13px] text-muted-foreground">
-                          {documents?.length || 0} {t("fonte(s) nesta base")}
-                        </p>
+                <SectionHeader
+                  title={selectedBase.name || t("Base de conhecimento")}
+                />
+                <div className="relative min-h-0 flex-1">
+                  <aside className="flex h-full min-h-0 flex-col border-b border-border bg-sidebar/30 lg:border-b-0">
+                    <div className="shrink-0 border-b border-border px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-[20px] font-medium text-foreground">
+                            {t("Fontes")}
+                          </h2>
+                          <p className="mt-1 text-[13px] text-muted-foreground">
+                            {documents?.length || 0} {t("fonte(s) nesta base")}
+                          </p>
+                        </div>
+                        {documentsLoading && (
+                          <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+                        )}
                       </div>
-                      {documentsLoading && (
-                        <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-4 py-2.5 text-[14px] font-medium text-primary transition hover:bg-primary/10"
+                          onClick={openAddSources}
+                        >
+                          <Plus className="h-4 w-4" />
+                          {t("Adicionar fontes")}
+                        </button>
                       )}
                     </div>
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-4 py-2.5 text-[14px] font-medium text-primary transition hover:bg-primary/10"
-                        onClick={openAddSources}
-                      >
-                        <Plus className="h-4 w-4" />
-                        {t("Adicionar fontes")}
-                      </button>
-                    )}
-                  </div>
 
-                  <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-                    {!documentsLoading && !documents?.length && (
-                      <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center">
-                        <FileText className="mx-auto h-7 w-7 text-muted-foreground" />
-                        <p className="mt-3 text-[14px] font-medium text-foreground">
-                          {t("Nenhuma fonte adicionada ainda")}
-                        </p>
-                        <p className="mt-1 text-[12px] text-muted-foreground">
-                          {t("Adicione arquivos, texto ou sites para começar.")}
-                        </p>
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1.5">
-                      {documents?.map((document) => {
-                        const active = document.active !== false;
-                        const selected = selectedDocumentId === document.id;
-                        return (
-                          <div
-                            key={document.id}
-                            className={`flex items-center gap-2 rounded-xl border px-2 py-2 transition ${selected ? "border-primary/30 bg-primary/10" : "border-transparent hover:border-border hover:bg-muted/60"}`}
-                          >
-                            <button
-                              type="button"
-                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                              aria-expanded={selected}
-                              onClick={() => {
-                                setSelectedDocumentId(document.id);
-                                setShowMobileSummary(false);
-                              }}
+                    <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+                      {!documentsLoading && !documents?.length && (
+                        <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center">
+                          <FileText className="mx-auto h-7 w-7 text-muted-foreground" />
+                          <p className="mt-3 text-[14px] font-medium text-foreground">
+                            {t("Nenhuma fonte adicionada ainda")}
+                          </p>
+                          <p className="mt-1 text-[12px] text-muted-foreground">
+                            {t(
+                              "Adicione arquivos, texto ou sites para começar.",
+                            )}
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1.5">
+                        {documents?.map((document) => {
+                          const active = document.active !== false;
+                          const selected = selectedDocumentId === document.id;
+                          return (
+                            <div
+                              key={document.id}
+                              className={`flex items-center gap-2 rounded-xl border px-2 py-2 transition ${selected ? "border-primary/30 bg-primary/10" : "border-transparent hover:border-border hover:bg-muted/60"}`}
                             >
-                              <span className="shrink-0">
-                                {sourceIcon(document)}
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="flex items-center gap-2">
-                                  <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
-                                  <span className="truncate text-[14px] font-medium text-foreground">
-                                    {sourceTitleForDocument(document)}
+                              <button
+                                type="button"
+                                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                aria-expanded={selected}
+                                onClick={() => {
+                                  setSelectedDocumentId(document.id);
+                                  setShowMobileSummary(false);
+                                }}
+                              >
+                                <span className="shrink-0">
+                                  {sourceIcon(document)}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                                    <span className="truncate text-[14px] font-medium text-foreground">
+                                      {sourceTitleForDocument(document)}
+                                    </span>
+                                  </span>
+                                  <span className="mt-1 block pl-4">
+                                    {statusLabel(document, t)}
                                   </span>
                                 </span>
-                                <span className="mt-1 block pl-4">
-                                  {statusLabel(document, t)}
-                                </span>
-                              </span>
-                              <ChevronRight
-                                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${selected ? "rotate-90" : ""}`}
-                              />
-                            </button>
-                            <div
-                              className="shrink-0"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              <Switch
-                                checked={active}
-                                onCheckedChange={(checked) =>
-                                  void handleToggle(document, checked)
-                                }
-                                disabled={!isAdmin || updateDocument.isPending}
-                                aria-label={
-                                  active ? t("Fonte ativa") : t("Fonte inativa")
-                                }
-                              />
+                                <ChevronRight
+                                  className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${selected ? "rotate-90" : ""}`}
+                                />
+                              </button>
+                              <div
+                                className="shrink-0"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <Switch
+                                  checked={active}
+                                  onCheckedChange={(checked) =>
+                                    void handleToggle(document, checked)
+                                  }
+                                  disabled={
+                                    !isAdmin || updateDocument.isPending
+                                  }
+                                  aria-label={
+                                    active
+                                      ? t("Fonte ativa")
+                                      : t("Fonte inativa")
+                                  }
+                                />
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="shrink-0 border-t border-border px-3 py-3">
-                    <button
-                      type="button"
-                      className={`flex w-full items-end gap-3 rounded-xl px-3 py-3 text-left transition ${showMobileSummary ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"} ${!selectedDocumentId && !showMobileSummary ? "lg:bg-primary/10 lg:text-primary" : ""}`}
-                      onClick={() => {
-                        setSelectedDocumentId(undefined);
-                        setShowMobileSummary(true);
-                      }}
-                      aria-pressed={showMobileSummary}
-                    >
-                      <BookOpenText className="mb-0.5 h-5 w-5 shrink-0" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-medium">
-                          {t("Contexto consolidado")}
+                    <div className="shrink-0 border-t border-border px-3 py-3">
+                      <button
+                        type="button"
+                        className={`flex w-full items-end gap-3 rounded-xl px-3 py-3 text-left transition ${showMobileSummary ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"} ${!selectedDocumentId && !showMobileSummary ? "lg:bg-primary/10 lg:text-primary" : ""}`}
+                        onClick={() => {
+                          setSelectedDocumentId(undefined);
+                          setShowMobileSummary(true);
+                        }}
+                        aria-pressed={showMobileSummary}
+                      >
+                        <BookOpenText className="mb-0.5 h-5 w-5 shrink-0" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[14px] font-medium">
+                            {t("Contexto consolidado")}
+                          </span>
+                          <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                            {t("Visão geral da base")}
+                          </span>
                         </span>
-                        <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                          {t("Visão geral da base")}
-                        </span>
-                      </span>
-                      <ChevronRight className="mb-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  </div>
-                </aside>
+                        <ChevronRight className="mb-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      </button>
+                    </div>
+                  </aside>
+                </div>
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={t("Redimensionar painel de fontes")}
+                  className="absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize lg:block"
+                  onMouseDown={handleSourcesMouseDown}
+                />
               </div>
 
               <main
