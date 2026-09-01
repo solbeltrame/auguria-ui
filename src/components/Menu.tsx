@@ -12,6 +12,7 @@ import {
   Languages,
   Plus,
   NotebookTabs,
+  LibraryBig,
 } from "lucide-react";
 import { useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { LinkButton } from "./LinkButton";
@@ -131,6 +132,16 @@ export default function Menu() {
           className="mt-[10px]"
         >
           <BarChart3 className="w-[24px] h-[24px] stroke-[2]" />
+        </LinkButton>
+
+        {/* Knowledge base button */}
+        <LinkButton
+          to="/knowledge"
+          title={t("Conhecimento")}
+          isActive={pathname.startsWith("/knowledge")}
+          className="mt-[10px]"
+        >
+          <LibraryBig className="w-[24px] h-[24px] stroke-[2]" />
         </LinkButton>
       </div>
 

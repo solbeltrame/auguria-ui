@@ -69,4 +69,9 @@ export const queryKeys = {
     planProducts: (orgId: NullableId) =>
       [orgId, "billing", "plan_products"] as const,
   },
+  knowledge: {
+    bases: (orgId: NullableId) => [orgId, "knowledge_bases"] as const,
+    documents: (orgId: NullableId, baseId: NullableId) =>
+      [orgId, "knowledge_documents", baseId] as const,
+  },
 };

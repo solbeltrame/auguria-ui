@@ -126,6 +126,150 @@ export type Database = MergeDeep<
           Update: AgentUpdateStrict;
           Relationships: DatabaseGenerated["public"]["Tables"]["agents"]["Relationships"];
         };
+        knowledge_bases: {
+          Row: {
+            id: string;
+            organization_id: string;
+            name: string;
+            description: string | null;
+            status: "active" | "archived";
+            created_by: string | null;
+            created_at: string;
+            updated_at: string;
+          };
+          Insert: {
+            id?: string;
+            organization_id: string;
+            name: string;
+            description?: string | null;
+            status?: "active" | "archived";
+            created_by?: string | null;
+            created_at?: string;
+            updated_at?: string;
+          };
+          Update: {
+            id?: string;
+            organization_id?: string;
+            name?: string;
+            description?: string | null;
+            status?: "active" | "archived";
+            created_by?: string | null;
+            created_at?: string;
+            updated_at?: string;
+          };
+          Relationships: [];
+        };
+        knowledge_documents: {
+          Row: {
+            id: string;
+            organization_id: string;
+            knowledge_base_id: string;
+            file_name: string;
+            mime_type: string;
+            storage_path: string;
+            file_size: number;
+            status: "pending" | "processing" | "ready" | "error";
+            extracted_text: string | null;
+            error_message: string | null;
+            metadata: Json;
+            created_by: string | null;
+            created_at: string;
+            updated_at: string;
+          };
+          Insert: {
+            id?: string;
+            organization_id: string;
+            knowledge_base_id: string;
+            file_name: string;
+            mime_type: string;
+            storage_path: string;
+            file_size?: number;
+            status?: "pending" | "processing" | "ready" | "error";
+            extracted_text?: string | null;
+            error_message?: string | null;
+            metadata?: Json;
+            created_by?: string | null;
+            created_at?: string;
+            updated_at?: string;
+          };
+          Update: {
+            id?: string;
+            organization_id?: string;
+            knowledge_base_id?: string;
+            file_name?: string;
+            mime_type?: string;
+            storage_path?: string;
+            file_size?: number;
+            status?: "pending" | "processing" | "ready" | "error";
+            extracted_text?: string | null;
+            error_message?: string | null;
+            metadata?: Json;
+            created_by?: string | null;
+            created_at?: string;
+            updated_at?: string;
+          };
+          Relationships: [];
+        };
+        knowledge_chunks: {
+          Row: {
+            id: string;
+            organization_id: string;
+            knowledge_base_id: string;
+            document_id: string;
+            chunk_index: number;
+            content: string;
+            search_vector: string;
+            embedding: number[] | null;
+            metadata: Json;
+            created_at: string;
+          };
+          Insert: {
+            id?: string;
+            organization_id: string;
+            knowledge_base_id: string;
+            document_id: string;
+            chunk_index: number;
+            content: string;
+            search_vector?: string;
+            embedding?: number[] | null;
+            metadata?: Json;
+            created_at?: string;
+          };
+          Update: {
+            id?: string;
+            organization_id?: string;
+            knowledge_base_id?: string;
+            document_id?: string;
+            chunk_index?: number;
+            content?: string;
+            search_vector?: string;
+            embedding?: number[] | null;
+            metadata?: Json;
+            created_at?: string;
+          };
+          Relationships: [];
+        };
+        agent_knowledge_bases: {
+          Row: {
+            organization_id: string;
+            agent_id: string;
+            knowledge_base_id: string;
+            created_at: string;
+          };
+          Insert: {
+            organization_id: string;
+            agent_id: string;
+            knowledge_base_id: string;
+            created_at?: string;
+          };
+          Update: {
+            organization_id?: string;
+            agent_id?: string;
+            knowledge_base_id?: string;
+            created_at?: string;
+          };
+          Relationships: [];
+        };
       };
     };
   }
@@ -179,6 +323,23 @@ export type OrganizationAddressRow =
 export type ApiKeyRow = Database["public"]["Tables"]["api_keys"]["Row"];
 export type ApiKeyInsert = Database["public"]["Tables"]["api_keys"]["Insert"];
 export type ApiKeyUpdate = Database["public"]["Tables"]["api_keys"]["Update"];
+
+export type KnowledgeBaseRow =
+  Database["public"]["Tables"]["knowledge_bases"]["Row"];
+export type KnowledgeBaseInsert =
+  Database["public"]["Tables"]["knowledge_bases"]["Insert"];
+export type KnowledgeBaseUpdate =
+  Database["public"]["Tables"]["knowledge_bases"]["Update"];
+export type KnowledgeDocumentRow =
+  Database["public"]["Tables"]["knowledge_documents"]["Row"];
+export type KnowledgeDocumentInsert =
+  Database["public"]["Tables"]["knowledge_documents"]["Insert"];
+export type KnowledgeDocumentUpdate =
+  Database["public"]["Tables"]["knowledge_documents"]["Update"];
+export type AgentKnowledgeBaseRow =
+  Database["public"]["Tables"]["agent_knowledge_bases"]["Row"];
+export type AgentKnowledgeBaseInsert =
+  Database["public"]["Tables"]["agent_knowledge_bases"]["Insert"];
 
 export type Role = Database["public"]["Enums"]["role"];
 
