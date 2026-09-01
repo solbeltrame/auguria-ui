@@ -291,7 +291,7 @@ function AddSourcesModal({
       }}
     >
       <div
-        className="flex max-h-[calc(100dvh-24px)] w-full max-w-[840px] flex-col overflow-hidden rounded-[28px] border border-border bg-background p-4 shadow-2xl sm:p-6"
+        className="flex max-h-[calc(100dvh-32px)] min-h-0 w-full max-w-[840px] flex-col overflow-x-hidden overflow-y-auto overscroll-contain rounded-[28px] border border-border bg-background p-4 shadow-2xl sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         onPaste={handlePaste}
       >
@@ -536,6 +536,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
   const [sourceTitle, setSourceTitle] = useState("");
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [showAddSources, setShowAddSources] = useState(false);
+  const [showMobileSummary, setShowMobileSummary] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [generatedContext, setGeneratedContext] = useState("");
   const [uploadError, setUploadError] = useState<string>();
@@ -594,6 +595,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
     setInstructions(selectedBase.instructions || "");
     setGeneratedContext(selectedBase.generated_context || "");
     setSelectedDocumentId(undefined);
+    setShowMobileSummary(false);
     hydratedDocumentId.current = undefined;
     setEditingDocumentTitle("");
     setUploadError(undefined);
@@ -606,6 +608,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
       !documents?.some((document) => document.id === selectedDocumentId)
     ) {
       setSelectedDocumentId(undefined);
+      setShowMobileSummary(false);
     }
   }, [documents, selectedDocumentId]);
 
@@ -655,6 +658,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
           setBaseDescription("");
           setShowBaseForm(false);
           setSelectedBaseId(base.id);
+          setShowMobileSummary(false);
           setFeedback(t("Base criada. Vincule-a a um agente para ativá-la."));
         },
         onError: (error) => setUploadError(errorMessage(error)),
@@ -679,6 +683,8 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
       {
         onSuccess: (base) => {
           setSelectedBaseId(base.id);
+          setSelectedDocumentId(undefined);
+          setShowMobileSummary(false);
           setFeedback(
             t("Base duplicada com fontes independentes para você testar."),
           );
@@ -701,6 +707,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
       onSuccess: () => {
         setSelectedBaseId(undefined);
         setSelectedDocumentId(undefined);
+        setShowMobileSummary(false);
         setFeedback(t("Base excluída."));
       },
       onError: (error) => setUploadError(errorMessage(error)),
@@ -902,6 +909,8 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
     });
   };
 
+  const mobileDetailOpen = Boolean(showMobileSummary || selectedDocumentId);
+
   return (
     <>
       <SectionHeader title={selectedBase?.name || t("Base de conhecimento")} />
@@ -932,6 +941,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                     onChange={(event) => {
                       setSelectedBaseId(event.target.value || undefined);
                       setSelectedDocumentId(undefined);
+                      setShowMobileSummary(false);
                     }}
                     aria-label={t("Base selecionada")}
                   >
@@ -1026,7 +1036,10 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                   : undefined
               }
             >
-              <div ref={sourcesPanelRef} className="relative min-h-0 h-full">
+              <div
+                ref={sourcesPanelRef}
+                className={`relative min-h-0 h-full ${mobileDetailOpen ? "hidden lg:block" : "block"}`}
+              >
                 <aside className="flex h-full min-h-0 flex-col border-b border-border bg-sidebar/30 lg:border-b-0 lg:border-r">
                   <div
                     role="separator"
@@ -1035,7 +1048,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                     className="absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize lg:block"
                     onMouseDown={handleSourcesMouseDown}
                   />
-                  <div className="border-b border-border px-4 py-4">
+                  <div className="shrink-0 border-b border-border px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h2 className="text-[20px] font-medium text-foreground">
@@ -1086,7 +1099,10 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                               type="button"
                               className="flex min-w-0 flex-1 items-center gap-2 text-left"
                               aria-expanded={selected}
-                              onClick={() => setSelectedDocumentId(document.id)}
+                              onClick={() => {
+                                setSelectedDocumentId(document.id);
+                                setShowMobileSummary(false);
+                              }}
                             >
                               <span className="shrink-0">
                                 {sourceIcon(document)}
@@ -1127,11 +1143,15 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                     </div>
                   </div>
 
-                  <div className="border-t border-border px-3 py-3">
+                  <div className="shrink-0 border-t border-border px-3 py-3">
                     <button
                       type="button"
-                      className={`flex w-full items-end gap-3 rounded-xl px-3 py-3 text-left transition ${!selectedDocumentId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
-                      onClick={() => setSelectedDocumentId(undefined)}
+                      className={`flex w-full items-end gap-3 rounded-xl px-3 py-3 text-left transition ${showMobileSummary ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"} ${!selectedDocumentId && !showMobileSummary ? "lg:bg-primary/10 lg:text-primary" : ""}`}
+                      onClick={() => {
+                        setSelectedDocumentId(undefined);
+                        setShowMobileSummary(true);
+                      }}
+                      aria-pressed={showMobileSummary}
                     >
                       <BookOpenText className="mb-0.5 h-5 w-5 shrink-0" />
                       <span className="min-w-0 flex-1">
@@ -1148,7 +1168,9 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                 </aside>
               </div>
 
-              <main className="flex min-h-0 min-w-0 flex-col bg-background">
+              <main
+                className={`min-h-0 min-w-0 flex-col bg-background ${mobileDetailOpen ? "flex" : "hidden lg:flex"}`}
+              >
                 {selectedDocument ? (
                   <div className="flex min-h-0 flex-1 flex-col">
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
@@ -1156,9 +1178,12 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                         <button
                           type="button"
                           className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                          title={t("Voltar para o contexto")}
-                          aria-label={t("Voltar para o contexto")}
-                          onClick={() => setSelectedDocumentId(undefined)}
+                          title={t("Voltar")}
+                          aria-label={t("Voltar")}
+                          onClick={() => {
+                            setSelectedDocumentId(undefined);
+                            setShowMobileSummary(false);
+                          }}
                         >
                           <ArrowLeft className="h-5 w-5" />
                         </button>
@@ -1335,19 +1360,30 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                   </div>
                 ) : (
                   <div className="flex min-h-0 flex-1 flex-col">
-                    <div className="hidden flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4 lg:flex">
-                      <div>
-                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                          {t("Visão geral")}
-                        </p>
-                        <h2 className="mt-1 text-[24px] font-medium tracking-tight text-foreground">
-                          {t("Contexto consolidado")}
-                        </h2>
-                        <p className="mt-1 max-w-[680px] text-[14px] text-muted-foreground">
-                          {t(
-                            "O agente combina as fontes ativas com os ajustes manuais desta base. Em caso de conflito, os ajustes manuais têm prioridade.",
-                          )}
-                        </p>
+                    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <button
+                          type="button"
+                          className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground lg:hidden"
+                          title={t("Voltar para as fontes")}
+                          aria-label={t("Voltar para as fontes")}
+                          onClick={() => setShowMobileSummary(false)}
+                        >
+                          <ArrowLeft className="h-5 w-5" />
+                        </button>
+                        <div>
+                          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            {t("Visão geral")}
+                          </p>
+                          <h2 className="mt-1 text-[24px] font-medium tracking-tight text-foreground">
+                            {t("Contexto consolidado")}
+                          </h2>
+                          <p className="mt-1 max-w-[680px] text-[14px] text-muted-foreground">
+                            {t(
+                              "O agente combina as fontes ativas com os ajustes manuais desta base. Em caso de conflito, os ajustes manuais têm prioridade.",
+                            )}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {isAdmin && (
