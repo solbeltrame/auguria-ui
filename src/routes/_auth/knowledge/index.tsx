@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent, FormEvent, ReactNode, RefObject } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   BookOpenText,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Copy,
   FileText,
   Globe2,
   Link2,
@@ -22,6 +24,8 @@ import {
   XCircle,
 } from "lucide-react";
 import SectionHeader from "@/components/SectionHeader";
+import SectionBody from "@/components/SectionBody";
+import SectionItem from "@/components/SectionItem";
 import Switch from "@/components/Switch";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useCurrentAgent } from "@/queries/useAgents";
@@ -42,7 +46,7 @@ import {
 import type { KnowledgeDocumentRow } from "@/supabase/client";
 
 export const Route = createFileRoute("/_auth/knowledge/")({
-  component: KnowledgePage,
+  component: KnowledgeBasesPage,
 });
 
 const ACCEPTED_FILES =
@@ -401,7 +405,7 @@ function AddSourcesModal({
   );
 }
 
-function KnowledgePage() {
+export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   const { translate: t } = useTranslation();
   const { data: currentAgent } = useCurrentAgent();
   const { data: bases, isLoading: basesLoading } = useKnowledgeBases();
@@ -415,7 +419,9 @@ function KnowledgePage() {
   const updateDocument = useUpdateKnowledgeDocument();
   const deleteDocument = useDeleteKnowledgeDocument();
   const reprocessDocument = useReprocessKnowledgeDocument();
-  const [selectedBaseId, setSelectedBaseId] = useState<string>();
+  const [selectedBaseId, setSelectedBaseId] = useState<string | undefined>(
+    baseId,
+  );
   const [baseName, setBaseName] = useState("");
   const [baseDescription, setBaseDescription] = useState("");
   const [showBaseForm, setShowBaseForm] = useState(false);
@@ -444,6 +450,10 @@ function KnowledgePage() {
     synthesizeBase.isPending;
 
   useEffect(() => {
+    if (baseId) {
+      if (selectedBaseId !== baseId) setSelectedBaseId(baseId);
+      return;
+    }
     if (!bases?.length) {
       setSelectedBaseId(undefined);
       return;
@@ -451,7 +461,7 @@ function KnowledgePage() {
     if (!selectedBaseId || !bases.some((base) => base.id === selectedBaseId)) {
       setSelectedBaseId(bases[0].id);
     }
-  }, [bases, selectedBaseId]);
+  }, [baseId, bases, selectedBaseId]);
 
   useEffect(() => {
     if (!selectedBase || hydratedBaseId.current === selectedBase.id) return;
@@ -709,82 +719,84 @@ function KnowledgePage() {
 
   return (
     <>
-      <SectionHeader title={t("Base de conhecimento")} />
+      <SectionHeader title={selectedBase?.name || t("Base de conhecimento")} />
 
       <div className="section-body h-full w-full overflow-y-auto [scrollbar-gutter:stable]">
         <div className="flex min-h-full flex-col">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="rounded-2xl bg-primary/10 p-2.5 text-primary">
-                <BookOpenText className="h-6 w-6" />
+          {!baseId && (
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="rounded-2xl bg-primary/10 p-2.5 text-primary">
+                  <BookOpenText className="h-6 w-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    {t("Conhecimento do agente")}
+                  </p>
+                  <p className="truncate text-[19px] font-medium text-foreground">
+                    {selectedBase?.name || t("Nenhuma base selecionada")}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  {t("Conhecimento do agente")}
-                </p>
-                <p className="truncate text-[19px] font-medium text-foreground">
-                  {selectedBase?.name || t("Nenhuma base selecionada")}
-                </p>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {bases?.length ? (
-                <select
-                  className="!w-auto min-w-[170px] rounded-xl border border-border bg-background px-3 py-2 text-[14px] text-foreground !outline-none"
-                  value={selectedBase?.id || ""}
-                  onChange={(event) => {
-                    setSelectedBaseId(event.target.value || undefined);
-                    setSelectedDocumentId(undefined);
-                  }}
-                  aria-label={t("Base selecionada")}
-                >
-                  {bases.map((base) => (
-                    <option key={base.id} value={base.id}>
-                      {base.name} —{" "}
-                      {base.status === "active" ? t("ativa") : t("arquivada")}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-              {isAdmin && (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-[14px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
-                  onClick={() => setShowBaseForm((current) => !current)}
-                  disabled={createBase.isPending}
-                >
-                  <Plus className="h-4 w-4" />
-                  {t("Nova base")}
-                </button>
-              )}
-              {selectedBase && isAdmin && (
-                <>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {bases?.length ? (
+                  <select
+                    className="!w-auto min-w-[170px] rounded-xl border border-border bg-background px-3 py-2 text-[14px] text-foreground !outline-none"
+                    value={selectedBase?.id || ""}
+                    onChange={(event) => {
+                      setSelectedBaseId(event.target.value || undefined);
+                      setSelectedDocumentId(undefined);
+                    }}
+                    aria-label={t("Base selecionada")}
+                  >
+                    {bases.map((base) => (
+                      <option key={base.id} value={base.id}>
+                        {base.name} —{" "}
+                        {base.status === "active" ? t("ativa") : t("arquivada")}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {isAdmin && (
                   <button
                     type="button"
-                    className="rounded-full border border-border px-4 py-2 text-[14px] font-medium text-foreground transition hover:border-primary hover:text-primary disabled:opacity-50"
-                    onClick={handleDuplicateBase}
-                    disabled={duplicateBase.isPending}
+                    className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-[14px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
+                    onClick={() => setShowBaseForm((current) => !current)}
+                    disabled={createBase.isPending}
                   >
-                    {duplicateBase.isPending
-                      ? t("Duplicando...")
-                      : t("Duplicar")}
+                    <Plus className="h-4 w-4" />
+                    {t("Nova base")}
                   </button>
-                  <button
-                    type="button"
-                    className="rounded-full border border-destructive/30 px-4 py-2 text-[14px] font-medium text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
-                    onClick={handleDeleteBase}
-                    disabled={deleteBase.isPending}
-                  >
-                    <Trash2 className="mr-1 inline h-4 w-4" />
-                    {t("Excluir")}
-                  </button>
-                </>
-              )}
+                )}
+                {selectedBase && isAdmin && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-full border border-border px-4 py-2 text-[14px] font-medium text-foreground transition hover:border-primary hover:text-primary disabled:opacity-50"
+                      onClick={handleDuplicateBase}
+                      disabled={duplicateBase.isPending}
+                    >
+                      {duplicateBase.isPending
+                        ? t("Duplicando...")
+                        : t("Duplicar")}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full border border-destructive/30 px-4 py-2 text-[14px] font-medium text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
+                      onClick={handleDeleteBase}
+                      disabled={deleteBase.isPending}
+                    >
+                      <Trash2 className="mr-1 inline h-4 w-4" />
+                      {t("Excluir")}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
-          {showBaseForm && isAdmin && (
+          {!baseId && showBaseForm && isAdmin && (
             <form
               className="!m-0 !flex !grow-0 !flex-col !gap-3 border-b border-border bg-muted/20 px-5 py-4 md:!flex-row"
               onSubmit={handleCreateBase}
@@ -835,6 +847,31 @@ function KnowledgePage() {
                       <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
                     )}
                   </div>
+                  {isAdmin && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-2 text-[13px] font-medium text-foreground transition hover:border-primary hover:text-primary disabled:opacity-50"
+                        onClick={handleDuplicateBase}
+                        disabled={duplicateBase.isPending}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {duplicateBase.isPending
+                          ? t("Duplicando...")
+                          : t("Duplicar")}
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-full border border-destructive/30 p-2 text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
+                        onClick={handleDeleteBase}
+                        disabled={deleteBase.isPending}
+                        title={t("Excluir base")}
+                        aria-label={t("Excluir base")}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                   {isAdmin && (
                     <button
                       type="button"
@@ -1256,6 +1293,249 @@ function KnowledgePage() {
         }
         onSubmit={() => void handleAddSources()}
       />
+    </>
+  );
+}
+
+function KnowledgeBasesPage() {
+  const { translate: t } = useTranslation();
+  const navigate = useNavigate();
+  const { data: bases, isLoading } = useKnowledgeBases();
+  const { data: currentAgent } = useCurrentAgent();
+  const createBase = useCreateKnowledgeBase();
+  const duplicateBase = useDuplicateKnowledgeBase();
+  const deleteBase = useDeleteKnowledgeBase();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState<string>();
+  const [feedback, setFeedback] = useState<string>();
+  const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
+
+  const handleCreate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName || !isAdmin) return;
+    setError(undefined);
+    createBase.mutate(
+      {
+        name: trimmedName,
+        description: description.trim() || undefined,
+      },
+      {
+        onSuccess: (base) => {
+          setName("");
+          setDescription("");
+          setShowCreateForm(false);
+          void navigate({
+            to: `/knowledge/${base.id}`,
+            hash: (previousHash) => previousHash!,
+          });
+        },
+        onError: (mutationError) => setError(errorMessage(mutationError)),
+      },
+    );
+  };
+
+  const handleDuplicate = (base: NonNullable<typeof bases>[number]) => {
+    if (!isAdmin) return;
+    const copyName = window
+      .prompt(t("Nome da nova base"), `${base.name} — cópia`)
+      ?.trim();
+    if (!copyName) return;
+    setError(undefined);
+    setFeedback(undefined);
+    duplicateBase.mutate(
+      {
+        baseId: base.id,
+        name: copyName,
+        description: base.description || undefined,
+      },
+      {
+        onSuccess: (duplicatedBase) => {
+          setFeedback(t("Base duplicada com fontes independentes."));
+          void navigate({
+            to: `/knowledge/${duplicatedBase.id}`,
+            hash: (previousHash) => previousHash!,
+          });
+        },
+        onError: (mutationError) => setError(errorMessage(mutationError)),
+      },
+    );
+  };
+
+  const handleDelete = (base: NonNullable<typeof bases>[number]) => {
+    if (!isAdmin) return;
+    if (
+      !window.confirm(
+        `${t("Excluir a base e suas fontes vinculadas")}? “${base.name}”`,
+      )
+    ) {
+      return;
+    }
+    setError(undefined);
+    deleteBase.mutate(base.id, {
+      onSuccess: () => setFeedback(t("Base excluída.")),
+      onError: (mutationError) => setError(errorMessage(mutationError)),
+    });
+  };
+
+  return (
+    <>
+      <SectionHeader title={t("Base de conhecimento")} />
+
+      <SectionBody>
+        <SectionItem
+          title={t("Criar nova base")}
+          description={t("Comece um contexto isolado para seus agentes")}
+          aside={
+            <div className="rounded-full bg-primary/10 p-2 text-primary">
+              <Plus className="h-6 w-6" />
+            </div>
+          }
+          onClick={() => {
+            setError(undefined);
+            setShowCreateForm((current) => !current);
+          }}
+          disabled={!isAdmin}
+          disabledReason={t("Requer permissões de administrador")}
+        />
+
+        {showCreateForm && isAdmin && (
+          <form
+            className="mb-3 flex flex-col gap-2 rounded-2xl border border-border bg-muted/20 p-3"
+            onSubmit={handleCreate}
+          >
+            <input
+              className="text w-full rounded-xl border border-border px-3 py-2 !outline-none"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("Nome da base")}
+              maxLength={120}
+              autoFocus
+              required
+            />
+            <input
+              className="text w-full rounded-xl border border-border px-3 py-2 !outline-none"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder={t("Descrição opcional")}
+              maxLength={500}
+            />
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                className="rounded-full px-3 py-2 text-[13px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                onClick={() => setShowCreateForm(false)}
+              >
+                {t("Cancelar")}
+              </button>
+              <button
+                type="submit"
+                className="rounded-full bg-primary px-4 py-2 text-[13px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
+                disabled={createBase.isPending || !name.trim()}
+              >
+                {createBase.isPending ? t("Criando...") : t("Criar base")}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {isLoading ? (
+          <div className="flex items-center justify-center p-10">
+            <LoaderCircle className="h-7 w-7 animate-spin text-primary" />
+          </div>
+        ) : bases?.length ? (
+          <div className="flex flex-col gap-1">
+            {bases.map((base) => (
+              <div
+                key={base.id}
+                className="group flex min-h-[76px] items-center rounded-xl transition hover:bg-accent"
+              >
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2 text-left"
+                  onClick={() =>
+                    void navigate({
+                      to: `/knowledge/${base.id}`,
+                      hash: (previousHash) => previousHash!,
+                    })
+                  }
+                >
+                  <div className="shrink-0 rounded-xl bg-primary/10 p-2.5 text-primary">
+                    <BookOpenText className="h-5 w-5" />
+                  </div>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[16px] text-foreground">
+                      {base.name}
+                    </span>
+                    <span className="mt-1 flex items-center gap-2 text-[13px] text-muted-foreground">
+                      <span
+                        className={
+                          base.status === "active"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {base.status === "active" ? t("Ativa") : t("Arquivada")}
+                      </span>
+                      {base.description && (
+                        <span className="truncate">· {base.description}</span>
+                      )}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+                </button>
+                {isAdmin && (
+                  <div className="flex shrink-0 items-center gap-0.5 pr-2">
+                    <button
+                      type="button"
+                      className="rounded-full p-2 text-muted-foreground transition hover:bg-primary/10 hover:text-primary disabled:opacity-40"
+                      title={t("Duplicar base")}
+                      aria-label={`${t("Duplicar base")} ${base.name}`}
+                      onClick={() => handleDuplicate(base)}
+                      disabled={duplicateBase.isPending}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
+                      title={t("Excluir base")}
+                      aria-label={`${t("Excluir base")} ${base.name}`}
+                      onClick={() => handleDelete(base)}
+                      disabled={deleteBase.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border px-4 py-10 text-center">
+            <BookOpenText className="mx-auto h-9 w-9 text-primary" />
+            <p className="mt-3 text-[15px] font-medium text-foreground">
+              {t("Nenhuma base criada ainda")}
+            </p>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {t("Crie uma base para organizar fontes e contexto do agente.")}
+            </p>
+          </div>
+        )}
+
+        {feedback && (
+          <p className="mt-3 rounded-xl bg-primary/10 px-3 py-2 text-[13px] text-primary">
+            {feedback}
+          </p>
+        )}
+        {error && (
+          <p className="mt-3 whitespace-pre-line rounded-xl bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
+            {error}
+          </p>
+        )}
+      </SectionBody>
     </>
   );
 }

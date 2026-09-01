@@ -28,6 +28,7 @@ import { Route as OnboardInstagramCallbackRouteImport } from './routes/onboard.i
 import { Route as OnboardInstagramTokenRouteImport } from './routes/onboard.instagram.$token'
 import { Route as AuthStatsUsageRouteImport } from './routes/_auth/stats/usage'
 import { Route as AuthStatsQuotasRouteImport } from './routes/_auth/stats/quotas'
+import { Route as AuthKnowledgeBaseIdRouteImport } from './routes/_auth/knowledge/$baseId'
 import { Route as AuthIntegrationsMediaPreprocessingRouteImport } from './routes/_auth/integrations/media-preprocessing'
 import { Route as AuthConversationsNewRouteImport } from './routes/_auth/conversations/new'
 import { Route as AuthContactsNewRouteImport } from './routes/_auth/contacts/new'
@@ -158,6 +159,11 @@ const AuthStatsQuotasRoute = AuthStatsQuotasRouteImport.update({
   id: '/quotas',
   path: '/quotas',
   getParentRoute: () => AuthStatsRoute,
+} as any)
+const AuthKnowledgeBaseIdRoute = AuthKnowledgeBaseIdRouteImport.update({
+  id: '/knowledge/$baseId',
+  path: '/knowledge/$baseId',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthIntegrationsMediaPreprocessingRoute =
   AuthIntegrationsMediaPreprocessingRouteImport.update({
@@ -375,6 +381,7 @@ export interface FileRoutesByFullPath {
   '/contacts/new': typeof AuthContactsNewRoute
   '/conversations/new': typeof AuthConversationsNewRoute
   '/integrations/media-preprocessing': typeof AuthIntegrationsMediaPreprocessingRoute
+  '/knowledge/$baseId': typeof AuthKnowledgeBaseIdRoute
   '/stats/quotas': typeof AuthStatsQuotasRoute
   '/stats/usage': typeof AuthStatsUsageRoute
   '/onboard/instagram/$token': typeof OnboardInstagramTokenRoute
@@ -429,6 +436,7 @@ export interface FileRoutesByTo {
   '/contacts/new': typeof AuthContactsNewRoute
   '/conversations/new': typeof AuthConversationsNewRoute
   '/integrations/media-preprocessing': typeof AuthIntegrationsMediaPreprocessingRoute
+  '/knowledge/$baseId': typeof AuthKnowledgeBaseIdRoute
   '/stats/quotas': typeof AuthStatsQuotasRoute
   '/stats/usage': typeof AuthStatsUsageRoute
   '/onboard/instagram/$token': typeof OnboardInstagramTokenRoute
@@ -486,6 +494,7 @@ export interface FileRoutesById {
   '/_auth/contacts/new': typeof AuthContactsNewRoute
   '/_auth/conversations/new': typeof AuthConversationsNewRoute
   '/_auth/integrations/media-preprocessing': typeof AuthIntegrationsMediaPreprocessingRoute
+  '/_auth/knowledge/$baseId': typeof AuthKnowledgeBaseIdRoute
   '/_auth/stats/quotas': typeof AuthStatsQuotasRoute
   '/_auth/stats/usage': typeof AuthStatsUsageRoute
   '/onboard/instagram/$token': typeof OnboardInstagramTokenRoute
@@ -543,6 +552,7 @@ export interface FileRouteTypes {
     | '/contacts/new'
     | '/conversations/new'
     | '/integrations/media-preprocessing'
+    | '/knowledge/$baseId'
     | '/stats/quotas'
     | '/stats/usage'
     | '/onboard/instagram/$token'
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/contacts/new'
     | '/conversations/new'
     | '/integrations/media-preprocessing'
+    | '/knowledge/$baseId'
     | '/stats/quotas'
     | '/stats/usage'
     | '/onboard/instagram/$token'
@@ -653,6 +664,7 @@ export interface FileRouteTypes {
     | '/_auth/contacts/new'
     | '/_auth/conversations/new'
     | '/_auth/integrations/media-preprocessing'
+    | '/_auth/knowledge/$baseId'
     | '/_auth/stats/quotas'
     | '/_auth/stats/usage'
     | '/onboard/instagram/$token'
@@ -841,6 +853,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/stats/quotas'
       preLoaderRoute: typeof AuthStatsQuotasRouteImport
       parentRoute: typeof AuthStatsRoute
+    }
+    '/_auth/knowledge/$baseId': {
+      id: '/_auth/knowledge/$baseId'
+      path: '/knowledge/$baseId'
+      fullPath: '/knowledge/$baseId'
+      preLoaderRoute: typeof AuthKnowledgeBaseIdRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_auth/integrations/media-preprocessing': {
       id: '/_auth/integrations/media-preprocessing'
@@ -1115,6 +1134,7 @@ interface AuthRouteChildren {
   AuthContactsNewRoute: typeof AuthContactsNewRoute
   AuthConversationsNewRoute: typeof AuthConversationsNewRoute
   AuthIntegrationsMediaPreprocessingRoute: typeof AuthIntegrationsMediaPreprocessingRoute
+  AuthKnowledgeBaseIdRoute: typeof AuthKnowledgeBaseIdRoute
   AuthAgentsIndexRoute: typeof AuthAgentsIndexRoute
   AuthContactsIndexRoute: typeof AuthContactsIndexRoute
   AuthConversationsIndexRoute: typeof AuthConversationsIndexRoute
@@ -1162,6 +1182,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthConversationsNewRoute: AuthConversationsNewRoute,
   AuthIntegrationsMediaPreprocessingRoute:
     AuthIntegrationsMediaPreprocessingRoute,
+  AuthKnowledgeBaseIdRoute: AuthKnowledgeBaseIdRoute,
   AuthAgentsIndexRoute: AuthAgentsIndexRoute,
   AuthContactsIndexRoute: AuthContactsIndexRoute,
   AuthConversationsIndexRoute: AuthConversationsIndexRoute,
