@@ -65,7 +65,7 @@ async function recoverStaleProcessingDocuments(
     const recoveredById = new Map(
       (recovered as KnowledgeDocumentRow[]).map((row) => [row.id, row]),
     );
-    return rows.map((row) => recoveredById.get(row.id) || row);
+    return rows.map((row) => ({ ...row, ...recoveredById.get(row.id) }));
   } catch {
     return rows;
   }
