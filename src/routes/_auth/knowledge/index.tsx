@@ -61,7 +61,7 @@ export const Route = createFileRoute("/_auth/knowledge/")({
 const ACCEPTED_FILES =
   ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.md,.json,.xml,.html,.rtf,.sql,.png,.jpg,.jpeg,.gif,.bmp,.tif,.tiff,.webp,.mp3,.wav,.m4a,.ogg,.mp4,.mov,.webm";
 const MAX_INSTRUCTIONS = 60_000;
-const MIN_SOURCES_WIDTH = 280;
+const MIN_SOURCES_WIDTH = 300;
 const SOURCE_EXAMPLES = [
   "uma tabela de preços",
   "um manual de usuário",
@@ -73,10 +73,9 @@ const SOURCE_EXAMPLES = [
 type SourceMode = "text" | "sites";
 
 function getSourcesMaxWidth(): number {
-  return Math.max(
-    MIN_SOURCES_WIDTH + 1,
-    Math.min(560, Math.floor(window.innerWidth * 0.46)),
-  );
+  const menuWidth = window.innerWidth >= 1024 ? 64 : 48;
+  const availableSpace = window.innerWidth - menuWidth;
+  return Math.max(MIN_SOURCES_WIDTH + 1, Math.floor(availableSpace / 2));
 }
 
 function errorMessage(error: unknown): string {
@@ -1027,7 +1026,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
             </div>
           ) : selectedBase ? (
             <div
-              className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]"
+              className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(300px,1fr)_minmax(0,2fr)]"
               style={
                 sourcesWidth !== null
                   ? {
