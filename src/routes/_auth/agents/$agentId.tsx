@@ -102,7 +102,6 @@ function AgentDetail() {
       [...selectedKnowledgeBaseIds].sort().join(",")
     );
   }, [linkedKnowledgeBaseIds, selectedKnowledgeBaseIds]);
-
   const handleChat = async () => {
     if (!activeOrgId || !localAddress || !currentAgent) return;
 
@@ -172,17 +171,17 @@ function AgentDetail() {
             />
 
             <SectionField
-              label={t("Base de conhecimento")}
+              label={t("Bases de conhecimento")}
               description={
                 selectedKnowledgeBaseIds.length
                   ? t("Bases selecionadas")
-                  : t("Todas as bases ativas")
+                  : t("Nenhuma base vinculada")
               }
               disabled={!isAdmin}
             >
               <p className="text-[14px] text-muted-foreground">
                 {t(
-                  "Sem vínculos, o agente consulta todas as bases ativas da organização. Selecione bases para limitar o contexto.",
+                  "Vincule explicitamente as bases que este agente pode consultar. Isso permite testar uma nova versão isoladamente antes de colocá-la em produção.",
                 )}
               </p>
               {knowledgeBasesLoading || knowledgeLinksLoading ? (
@@ -207,12 +206,18 @@ function AgentDetail() {
                               : current.filter((id) => id !== base.id),
                           );
                         }}
+                        disabled={!isAdmin}
                       />
                       <span className="flex flex-col gap-1">
                         <span>{base.name}</span>
                         {base.description && (
                           <span className="text-[13px] text-muted-foreground">
                             {base.description}
+                          </span>
+                        )}
+                        {base.status === "archived" && (
+                          <span className="text-[12px] text-muted-foreground">
+                            {t("Arquivada — não será consultada")}
                           </span>
                         )}
                       </span>

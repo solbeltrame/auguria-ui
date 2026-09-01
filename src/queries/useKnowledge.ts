@@ -57,7 +57,7 @@ export function useKnowledgeDocuments(baseId?: string) {
       const { data } = await query.throwOnError();
       return data as KnowledgeDocumentRow[];
     },
-    enabled: !!userId && !!organizationId,
+    enabled: !!userId && !!organizationId && !!baseId,
     refetchInterval: (query) => {
       const rows = query.state.data as KnowledgeDocumentRow[] | undefined;
       return rows?.some(
@@ -166,6 +166,117 @@ export function useCreateKnowledgeBase() {
   });
 }
 
+export function useEnsureKnowledgeBase() {
+  const queryClient = useQueryClient();
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async () => {
+      const organization_id = requireOrganization(organizationId);
+      const base = await invokeFunction<KnowledgeBaseRow>(
+        "knowledge-management/bases/default",
+        {
+          method: "POST",
+          body: { organization_id },
+        },
+      );
+      if (!base) throw new Error("Empty knowledge base response");
+      return base;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.bases(organizationId),
+      });
+    },
+  });
+}
+
+export function useDuplicateKnowledgeBase() {
+  const queryClient = useQueryClient();
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async ({
+      baseId,
+      name,
+      description,
+    }: {
+      baseId: string;
+      name: string;
+      description?: string;
+    }) => {
+      const organization_id = requireOrganization(organizationId);
+      const base = await invokeFunction<KnowledgeBaseRow>(
+        `knowledge-management/bases/${baseId}/duplicate`,
+        {
+          method: "POST",
+          body: { organization_id, name, description },
+        },
+      );
+      if (!base) throw new Error("Empty duplicated knowledge base response");
+      return base;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.bases(organizationId),
+      });
+    },
+  });
+}
+
+export function useUpdateKnowledgeBase() {
+  const queryClient = useQueryClient();
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async ({
+      baseId,
+      instructions,
+    }: {
+      baseId: string;
+      instructions: string;
+    }) => {
+      const organization_id = requireOrganization(organizationId);
+      const base = await invokeFunction<KnowledgeBaseRow>(
+        `knowledge-management/bases/${baseId}`,
+        {
+          method: "PATCH",
+          body: { organization_id, instructions },
+        },
+      );
+      if (!base) throw new Error("Empty knowledge base response");
+      return base;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.bases(organizationId),
+      });
+    },
+  });
+}
+
+export function useSynthesizeKnowledgeBase() {
+  const queryClient = useQueryClient();
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async (baseId: string) => {
+      const organization_id = requireOrganization(organizationId);
+      const base = await invokeFunction<KnowledgeBaseRow>(
+        `knowledge-management/bases/${baseId}/synthesize?organization_id=${encodeURIComponent(organization_id)}`,
+        { method: "POST" },
+      );
+      if (!base) throw new Error("Empty knowledge base response");
+      return base;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.bases(organizationId),
+      });
+    },
+  });
+}
+
 export function useDeleteKnowledgeBase() {
   const queryClient = useQueryClient();
   const organizationId = useBoundStore((state) => state.ui.activeOrgId);
@@ -235,6 +346,84 @@ export function useUploadKnowledgeDocument() {
         queryKey: queryKeys.knowledge.documents(
           organizationId,
           variables.baseId,
+        ),
+      });
+    },
+  });
+}
+
+export function useCreateKnowledgeLink() {
+  const queryClient = useQueryClient();
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async ({
+      baseId,
+      url,
+      title,
+    }: {
+      baseId: string;
+      url: string;
+      title?: string;
+    }) => {
+      const organization_id = requireOrganization(organizationId);
+      const document = await invokeFunction<KnowledgeDocumentRow>(
+        "knowledge-management/documents",
+        {
+          method: "POST",
+          body: {
+            organization_id,
+            knowledge_base_id: baseId,
+            source_type: "url",
+            source_url: url,
+            file_name: title?.trim() || undefined,
+            mime_type: "text/html",
+            file_size: 0,
+          },
+        },
+      );
+      if (!document) throw new Error("Empty knowledge link response");
+      return document;
+    },
+    onSettled: (_, _error, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.documents(
+          organizationId,
+          variables.baseId,
+        ),
+      });
+    },
+  });
+}
+
+export function useUpdateKnowledgeDocument() {
+  const queryClient = useQueryClient();
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async ({
+      document,
+      active,
+    }: {
+      document: KnowledgeDocumentRow;
+      active: boolean;
+    }) => {
+      const organization_id = requireOrganization(organizationId);
+      const updated = await invokeFunction<KnowledgeDocumentRow>(
+        `knowledge-management/documents/${document.id}?organization_id=${encodeURIComponent(organization_id)}`,
+        {
+          method: "PATCH",
+          body: { active },
+        },
+      );
+      if (!updated) throw new Error("Empty knowledge document response");
+      return updated;
+    },
+    onSettled: (_, _error, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.documents(
+          organizationId,
+          variables.document.knowledge_base_id,
         ),
       });
     },

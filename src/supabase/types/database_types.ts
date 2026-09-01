@@ -132,6 +132,8 @@ export type Database = MergeDeep<
             organization_id: string;
             name: string;
             description: string | null;
+            instructions: string;
+            generated_context: string;
             status: "active" | "archived";
             created_by: string | null;
             created_at: string;
@@ -142,6 +144,8 @@ export type Database = MergeDeep<
             organization_id: string;
             name: string;
             description?: string | null;
+            instructions?: string;
+            generated_context?: string;
             status?: "active" | "archived";
             created_by?: string | null;
             created_at?: string;
@@ -152,6 +156,8 @@ export type Database = MergeDeep<
             organization_id?: string;
             name?: string;
             description?: string | null;
+            instructions?: string;
+            generated_context?: string;
             status?: "active" | "archived";
             created_by?: string | null;
             created_at?: string;
@@ -166,9 +172,12 @@ export type Database = MergeDeep<
             knowledge_base_id: string;
             file_name: string;
             mime_type: string;
-            storage_path: string;
+            storage_path: string | null;
+            source_type: "file" | "url";
+            source_url: string | null;
             file_size: number;
             status: "pending" | "processing" | "ready" | "error";
+            active: boolean;
             extracted_text: string | null;
             error_message: string | null;
             metadata: Json;
@@ -182,9 +191,12 @@ export type Database = MergeDeep<
             knowledge_base_id: string;
             file_name: string;
             mime_type: string;
-            storage_path: string;
+            storage_path?: string | null;
+            source_type?: "file" | "url";
+            source_url?: string | null;
             file_size?: number;
             status?: "pending" | "processing" | "ready" | "error";
+            active?: boolean;
             extracted_text?: string | null;
             error_message?: string | null;
             metadata?: Json;
@@ -198,9 +210,12 @@ export type Database = MergeDeep<
             knowledge_base_id?: string;
             file_name?: string;
             mime_type?: string;
-            storage_path?: string;
+            storage_path?: string | null;
+            source_type?: "file" | "url";
+            source_url?: string | null;
             file_size?: number;
             status?: "pending" | "processing" | "ready" | "error";
+            active?: boolean;
             extracted_text?: string | null;
             error_message?: string | null;
             metadata?: Json;
