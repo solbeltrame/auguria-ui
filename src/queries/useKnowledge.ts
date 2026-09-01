@@ -57,7 +57,7 @@ async function recoverStaleProcessingDocuments(
         error_message: STALE_PROCESSING_MESSAGE,
       })
       .eq("organization_id", organizationId)
-      .eq("status", "processing")
+      .in("status", ["pending", "processing"])
       .in("id", staleIds)
       .select(KNOWLEDGE_DOCUMENT_LIST_COLUMNS)
       .throwOnError();
