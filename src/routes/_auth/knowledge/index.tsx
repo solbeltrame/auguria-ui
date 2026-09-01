@@ -842,8 +842,8 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
     <>
       <SectionHeader title={selectedBase?.name || t("Base de conhecimento")} />
 
-      <div className="section-body h-full w-full overflow-y-auto [scrollbar-gutter:stable]">
-        <div className="flex min-h-full flex-col">
+      <div className="section-body min-h-0 w-full flex-1 overflow-y-auto [scrollbar-gutter:stable] lg:overflow-hidden">
+        <div className="flex min-h-full flex-col lg:min-h-0">
           {!baseId && (
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
               <div className="flex min-w-0 items-center gap-3">
@@ -953,7 +953,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
             </div>
           ) : selectedBase ? (
             <div
-              className="grid min-h-[calc(100dvh-145px)] flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]"
+              className="grid min-h-[calc(100dvh-145px)] flex-1 grid-cols-1 lg:min-h-0 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]"
               style={
                 sourcesWidth !== null
                   ? {
