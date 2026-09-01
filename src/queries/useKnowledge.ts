@@ -10,6 +10,13 @@ import { queryKeys } from "./queryKeys";
 
 const MAX_FILE_SIZE = 20 * 1000 * 1000;
 
+const KNOWLEDGE_BASE_LIST_COLUMNS =
+  "id,organization_id,name,description,status,created_by,created_at,updated_at";
+const KNOWLEDGE_BASE_DETAIL_COLUMNS = `${KNOWLEDGE_BASE_LIST_COLUMNS},instructions,generated_context`;
+const KNOWLEDGE_DOCUMENT_LIST_COLUMNS =
+  "id,organization_id,knowledge_base_id,title,file_name,mime_type,file_size,status,error_message,source_type,source_url,active,created_by,created_at,updated_at";
+const KNOWLEDGE_DOCUMENT_DETAIL_COLUMNS = `${KNOWLEDGE_DOCUMENT_LIST_COLUMNS},storage_path,extracted_text,metadata`;
+
 function requireOrganization(id: string | null): string {
   if (!id) throw new Error("No active organization");
   return id;
@@ -25,7 +32,7 @@ function safeFileName(fileName: string): string {
   return normalized || "arquivo";
 }
 
-export function useKnowledgeBases() {
+export function useKnowledgeBases(enabled = true) {
   const userId = useBoundStore((state) => state.ui.user?.id);
   const organizationId = useBoundStore((state) => state.ui.activeOrgId);
 
@@ -34,13 +41,33 @@ export function useKnowledgeBases() {
     queryFn: async () => {
       const { data } = await supabase
         .from("knowledge_bases")
-        .select()
+        .select(KNOWLEDGE_BASE_LIST_COLUMNS)
         .eq("organization_id", organizationId!)
         .order("updated_at", { ascending: false })
         .throwOnError();
       return data as KnowledgeBaseRow[];
     },
-    enabled: !!userId && !!organizationId,
+    enabled: enabled && !!userId && !!organizationId,
+  });
+}
+
+export function useKnowledgeBase(baseId?: string) {
+  const userId = useBoundStore((state) => state.ui.user?.id);
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useQuery({
+    queryKey: queryKeys.knowledge.base(organizationId, baseId),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("knowledge_bases")
+        .select(KNOWLEDGE_BASE_DETAIL_COLUMNS)
+        .eq("organization_id", organizationId!)
+        .eq("id", baseId!)
+        .single()
+        .throwOnError();
+      return data as KnowledgeBaseRow;
+    },
+    enabled: !!userId && !!organizationId && !!baseId,
   });
 }
 
@@ -53,7 +80,7 @@ export function useKnowledgeDocuments(baseId?: string) {
     queryFn: async () => {
       let query = supabase
         .from("knowledge_documents")
-        .select()
+        .select(KNOWLEDGE_DOCUMENT_LIST_COLUMNS)
         .eq("organization_id", organizationId!)
         .order("created_at", { ascending: false });
       if (baseId) query = query.eq("knowledge_base_id", baseId);
@@ -69,6 +96,26 @@ export function useKnowledgeDocuments(baseId?: string) {
         ? 5000
         : false;
     },
+  });
+}
+
+export function useKnowledgeDocument(documentId?: string) {
+  const userId = useBoundStore((state) => state.ui.user?.id);
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useQuery({
+    queryKey: queryKeys.knowledge.document(organizationId, documentId),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("knowledge_documents")
+        .select(KNOWLEDGE_DOCUMENT_DETAIL_COLUMNS)
+        .eq("organization_id", organizationId!)
+        .eq("id", documentId!)
+        .single()
+        .throwOnError();
+      return data as KnowledgeDocumentRow;
+    },
+    enabled: !!userId && !!organizationId && !!documentId,
   });
 }
 
@@ -250,9 +297,12 @@ export function useUpdateKnowledgeBase() {
       if (!base) throw new Error("Empty knowledge base response");
       return base;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.knowledge.bases(organizationId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.base(organizationId, variables.baseId),
       });
     },
   });
@@ -272,9 +322,12 @@ export function useSynthesizeKnowledgeBase() {
       if (!base) throw new Error("Empty knowledge base response");
       return base;
     },
-    onSuccess: () => {
+    onSuccess: (_data, baseId) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.knowledge.bases(organizationId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.base(organizationId, baseId),
       });
     },
   });
@@ -292,9 +345,12 @@ export function useDeleteKnowledgeBase() {
         { method: "DELETE" },
       );
     },
-    onSuccess: () => {
+    onSuccess: (_data, baseId) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.knowledge.bases(organizationId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.base(organizationId, baseId),
       });
       void queryClient.invalidateQueries({
         queryKey: [organizationId, "knowledge_documents"],
@@ -444,6 +500,12 @@ export function useUpdateKnowledgeDocument() {
           variables.document.knowledge_base_id,
         ),
       });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.document(
+          organizationId,
+          variables.document.id,
+        ),
+      });
     },
   });
 }
@@ -467,6 +529,9 @@ export function useDeleteKnowledgeDocument() {
           organizationId,
           document.knowledge_base_id,
         ),
+      });
+      void queryClient.removeQueries({
+        queryKey: queryKeys.knowledge.document(organizationId, document.id),
       });
     },
   });
@@ -492,6 +557,9 @@ export function useReprocessKnowledgeDocument() {
           organizationId,
           document.knowledge_base_id,
         ),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.document(organizationId, document.id),
       });
     },
   });

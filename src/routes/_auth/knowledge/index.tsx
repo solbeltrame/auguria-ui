@@ -36,7 +36,9 @@ import {
   useDeleteKnowledgeBase,
   useDeleteKnowledgeDocument,
   useDuplicateKnowledgeBase,
+  useKnowledgeBase,
   useKnowledgeBases,
+  useKnowledgeDocument,
   useKnowledgeDocuments,
   useReprocessKnowledgeDocument,
   useSynthesizeKnowledgeBase,
@@ -456,10 +458,10 @@ function AddSourcesModal({
   );
 }
 
-export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
+export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
   const { translate: t } = useTranslation();
   const { data: currentAgent } = useCurrentAgent();
-  const { data: bases, isLoading: basesLoading } = useKnowledgeBases();
+  const { data: bases, isLoading: basesLoading } = useKnowledgeBases(!baseId);
   const createBase = useCreateKnowledgeBase();
   const deleteBase = useDeleteKnowledgeBase();
   const duplicateBase = useDuplicateKnowledgeBase();
@@ -487,6 +489,9 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   const [generatedContext, setGeneratedContext] = useState("");
   const [uploadError, setUploadError] = useState<string>();
   const [feedback, setFeedback] = useState<string>();
+  const detailBaseId = baseId || selectedBaseId;
+  const { data: baseDetail, isLoading: baseDetailLoading } =
+    useKnowledgeBase(detailBaseId);
   const fileInput = useRef<HTMLInputElement>(null);
   const hydratedBaseId = useRef<string | undefined>(undefined);
   const hydratedDocumentId = useRef<string | undefined>(undefined);
@@ -501,12 +506,17 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   });
 
   const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
-  const selectedBase = bases?.find((base) => base.id === selectedBaseId);
+  const selectedBase =
+    baseDetail || bases?.find((base) => base.id === selectedBaseId);
+  const documentsBaseId = baseId || selectedBaseId;
   const { data: documents, isLoading: documentsLoading } =
-    useKnowledgeDocuments(selectedBase?.id);
-  const selectedDocument = documents?.find(
+    useKnowledgeDocuments(documentsBaseId);
+  const selectedDocumentSummary = documents?.find(
     (document) => document.id === selectedDocumentId,
   );
+  const { data: selectedDocumentDetail, isLoading: selectedDocumentLoading } =
+    useKnowledgeDocument(selectedDocumentId);
+  const selectedDocument = selectedDocumentDetail || selectedDocumentSummary;
   const addSourcesBusy =
     uploadDocument.isPending ||
     createLink.isPending ||
@@ -527,7 +537,8 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   }, [baseId, bases, selectedBaseId]);
 
   useEffect(() => {
-    if (!selectedBase || hydratedBaseId.current === selectedBase.id) return;
+    if (!selectedBase || (detailBaseId && !baseDetail)) return;
+    if (hydratedBaseId.current === selectedBase.id) return;
     hydratedBaseId.current = selectedBase.id;
     setInstructions(selectedBase.instructions || "");
     setGeneratedContext(selectedBase.generated_context || "");
@@ -536,7 +547,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
     setEditingDocumentTitle("");
     setUploadError(undefined);
     setFeedback(undefined);
-  }, [selectedBase]);
+  }, [baseDetail, detailBaseId, selectedBase]);
 
   useEffect(() => {
     if (
@@ -936,7 +947,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
             </form>
           )}
 
-          {basesLoading ? (
+          {basesLoading || (baseDetailLoading && !selectedBase) ? (
             <div className="flex flex-1 items-center justify-center p-10">
               <LoaderCircle className="h-7 w-7 animate-spin text-primary" />
             </div>
@@ -1234,12 +1245,16 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
                           <textarea
                             className="mt-4 min-h-[420px] w-full resize-y rounded-xl border border-border bg-muted/20 px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground outline-none"
                             value={
-                              selectedDocument.extracted_text ||
-                              (selectedDocument.status === "processing"
-                                ? t(
-                                    "Esta fonte ainda está sendo interpretada...",
-                                  )
-                                : t("Nenhum conteúdo interpretado disponível."))
+                              selectedDocumentLoading && !selectedDocumentDetail
+                                ? t("Carregando conteúdo da fonte...")
+                                : selectedDocumentDetail?.extracted_text ||
+                                  (selectedDocument.status === "processing"
+                                    ? t(
+                                        "Esta fonte ainda está sendo interpretada...",
+                                      )
+                                    : t(
+                                        "Nenhum conteúdo interpretado disponível.",
+                                      ))
                             }
                             readOnly
                             aria-label={t("Conteúdo interpretado")}

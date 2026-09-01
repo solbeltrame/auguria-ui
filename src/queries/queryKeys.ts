@@ -71,8 +71,12 @@ export const queryKeys = {
   },
   knowledge: {
     bases: (orgId: NullableId) => [orgId, "knowledge_bases"] as const,
+    base: (orgId: NullableId, baseId: NullableId) =>
+      [orgId, "knowledge_base", baseId] as const,
     documents: (orgId: NullableId, baseId: NullableId) =>
       [orgId, "knowledge_documents", baseId] as const,
+    document: (orgId: NullableId, documentId: NullableId) =>
+      [orgId, "knowledge_document", documentId] as const,
     agentLinks: (orgId: NullableId, agentId: NullableId) =>
       [orgId, "agent_knowledge_bases", agentId] as const,
   },
