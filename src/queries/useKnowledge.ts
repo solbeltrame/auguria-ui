@@ -9,6 +9,9 @@ import useBoundStore from "@/stores/useBoundStore";
 import { queryKeys } from "./queryKeys";
 
 const MAX_FILE_SIZE = 20 * 1000 * 1000;
+const STALE_PROCESSING_MS = 5 * 60 * 1_000;
+const STALE_PROCESSING_MESSAGE =
+  "O processamento foi interrompido antes de concluir. Tente processar novamente.";
 
 const KNOWLEDGE_BASE_LIST_COLUMNS =
   "id,organization_id,name,description,status,created_by,created_at,updated_at";
@@ -85,7 +88,37 @@ export function useKnowledgeDocuments(baseId?: string) {
         .order("created_at", { ascending: false });
       if (baseId) query = query.eq("knowledge_base_id", baseId);
       const { data } = await query.throwOnError();
-      return data as KnowledgeDocumentRow[];
+      const rows = data as KnowledgeDocumentRow[];
+      const cutoff = Date.now() - STALE_PROCESSING_MS;
+      const staleIds = rows
+        .filter(
+          (row) =>
+            row.status === "processing" &&
+            new Date(row.updated_at).getTime() < cutoff,
+        )
+        .map((row) => row.id);
+      if (!staleIds.length) return rows;
+
+      try {
+        const { data: recovered } = await supabase
+          .from("knowledge_documents")
+          .update({
+            status: "error",
+            error_message: STALE_PROCESSING_MESSAGE,
+          })
+          .eq("organization_id", organizationId!)
+          .eq("status", "processing")
+          .in("id", staleIds)
+          .select(KNOWLEDGE_DOCUMENT_LIST_COLUMNS)
+          .throwOnError();
+        if (!recovered?.length) return rows;
+        const recoveredById = new Map(
+          (recovered as KnowledgeDocumentRow[]).map((row) => [row.id, row]),
+        );
+        return rows.map((row) => recoveredById.get(row.id) || row);
+      } catch {
+        return rows;
+      }
     },
     enabled: !!userId && !!organizationId && !!baseId,
     refetchInterval: (query) => {
