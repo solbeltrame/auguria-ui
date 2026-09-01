@@ -17,9 +17,12 @@ function requireOrganization(id: string | null): string {
 
 function safeFileName(fileName: string): string {
   const normalized = fileName
-    .normalize("NFKC")
-    .replace(/[^\p{L}\p{N}._-]+/gu, "-");
-  return normalized.replace(/^-+|-+$/g, "").slice(0, 180) || "arquivo";
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 180);
+  return normalized || "arquivo";
 }
 
 export function useKnowledgeBases() {
