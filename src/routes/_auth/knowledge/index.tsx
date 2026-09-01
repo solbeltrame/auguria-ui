@@ -986,25 +986,6 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
                     )}
                   </div>
 
-                  <div className="border-b border-border px-3 py-3">
-                    <button
-                      type="button"
-                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${!selectedDocumentId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
-                      onClick={() => setSelectedDocumentId(undefined)}
-                    >
-                      <BookOpenText className="h-5 w-5 shrink-0" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-medium">
-                          {t("Contexto consolidado")}
-                        </span>
-                        <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                          {t("Visão geral da base")}
-                        </span>
-                      </span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  </div>
-
                   <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
                     {!documentsLoading && !documents?.length && (
                       <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center">
@@ -1069,6 +1050,25 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
                         );
                       })}
                     </div>
+                  </div>
+
+                  <div className="border-t border-border px-3 py-3">
+                    <button
+                      type="button"
+                      className={`flex w-full items-end gap-3 rounded-xl px-3 py-3 text-left transition ${!selectedDocumentId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
+                      onClick={() => setSelectedDocumentId(undefined)}
+                    >
+                      <BookOpenText className="mb-0.5 h-5 w-5 shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14px] font-medium">
+                          {t("Contexto consolidado")}
+                        </span>
+                        <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                          {t("Visão geral da base")}
+                        </span>
+                      </span>
+                      <ChevronRight className="mb-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    </button>
                   </div>
                 </aside>
               </div>
@@ -1256,7 +1256,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
                   </div>
                 ) : (
                   <div className="flex min-h-0 flex-1 flex-col">
-                    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4">
+                    <div className="hidden flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4 lg:flex">
                       <div>
                         <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                           {t("Visão geral")}
