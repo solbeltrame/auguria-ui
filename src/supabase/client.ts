@@ -54,7 +54,27 @@ export async function invokeFunction<T>(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- supabase-js types `error` as `any`
   const { data, error } = await supabase.functions.invoke<T>(name, options);
 
-  if (error) throw error;
+  if (error) {
+    const context = (error as { context?: unknown }).context;
+    if (context instanceof Response) {
+      let message: string | undefined;
+      try {
+        const payload = (await context.clone().json()) as unknown;
+        if (
+          payload &&
+          typeof payload === "object" &&
+          "message" in payload &&
+          typeof payload.message === "string"
+        ) {
+          message = payload.message;
+        }
+      } catch {
+        message = undefined;
+      }
+      if (message) throw new Error(message);
+    }
+    throw error;
+  }
 
   return data;
 }

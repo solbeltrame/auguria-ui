@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent, FormEvent, ReactNode, RefObject } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useNavigate } from "@tanstack/react-router";
@@ -28,6 +28,7 @@ import SectionBody from "@/components/SectionBody";
 import SectionItem from "@/components/SectionItem";
 import Switch from "@/components/Switch";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useResizable } from "@/hooks/useResizable";
 import { useCurrentAgent } from "@/queries/useAgents";
 import {
   useCreateKnowledgeBase,
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/_auth/knowledge/")({
 const ACCEPTED_FILES =
   ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.md,.json,.xml,.html,.rtf,.sql,.png,.jpg,.jpeg,.gif,.bmp,.tif,.tiff,.webp,.mp3,.wav,.m4a,.ogg,.mp4,.mov,.webm";
 const MAX_INSTRUCTIONS = 60_000;
+const MIN_SOURCES_WIDTH = 280;
 const SOURCE_EXAMPLES = [
   "uma tabela de preços",
   "um manual de usuário",
@@ -61,6 +63,13 @@ const SOURCE_EXAMPLES = [
 ];
 
 type SourceMode = "text" | "sites";
+
+function getSourcesMaxWidth(): number {
+  return Math.max(
+    MIN_SOURCES_WIDTH + 1,
+    Math.min(560, Math.floor(window.innerWidth * 0.46)),
+  );
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -181,15 +190,25 @@ function AddSourcesModal({
 }: AddSourcesModalProps) {
   const { translate: t } = useTranslation();
   const [exampleIndex, setExampleIndex] = useState(0);
+  const [exampleVisible, setExampleVisible] = useState(true);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     setExampleIndex(0);
+    setExampleVisible(true);
+    let fadeTimer: number | undefined;
     const timer = window.setInterval(() => {
-      setExampleIndex((current) => (current + 1) % SOURCE_EXAMPLES.length);
+      setExampleVisible(false);
+      fadeTimer = window.setTimeout(() => {
+        setExampleIndex((current) => (current + 1) % SOURCE_EXAMPLES.length);
+        setExampleVisible(true);
+      }, 320);
     }, 2300);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      if (fadeTimer !== undefined) window.clearTimeout(fadeTimer);
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -215,19 +234,19 @@ function AddSourcesModal({
       }}
     >
       <div
-        className="flex max-h-[min(790px,calc(100dvh-32px))] w-full max-w-[840px] flex-col overflow-y-auto rounded-[28px] border border-border bg-background p-5 shadow-2xl sm:p-8"
+        className="flex max-h-[calc(100dvh-24px)] w-full max-w-[840px] flex-col overflow-hidden rounded-[28px] border border-border bg-background p-4 shadow-2xl sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 text-center">
             <h2
               id="add-sources-title"
-              className="text-[27px] font-medium tracking-tight text-foreground sm:text-[34px]"
+              className="text-[24px] font-medium tracking-tight text-foreground sm:text-[32px]"
             >
               {t("Ensine o agente com fontes como")}
             </h2>
             <div
-              className="mt-1 min-h-[34px] bg-gradient-to-r from-violet-500 via-sky-500 to-emerald-500 bg-clip-text text-[23px] font-medium text-transparent sm:text-[28px]"
+              className={`mt-1 min-h-[34px] transform bg-gradient-to-r from-violet-500 via-sky-500 to-emerald-500 bg-clip-text text-[21px] font-medium text-transparent transition-all duration-500 ease-out sm:text-[27px] ${exampleVisible ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"}`}
               aria-live="polite"
             >
               {t(SOURCE_EXAMPLES[exampleIndex])}
@@ -244,10 +263,10 @@ function AddSourcesModal({
           </button>
         </div>
 
-        <div className="mt-8 rounded-[26px] border-2 border-primary/60 bg-background shadow-sm transition focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_15%,transparent)]">
+        <div className="mt-5 rounded-[24px] border-2 border-primary/60 bg-background shadow-sm transition focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_15%,transparent)] sm:mt-6">
           <textarea
             autoFocus
-            className="min-h-[145px] w-full resize-none rounded-t-[24px] bg-transparent px-5 py-4 text-[16px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
+            className="min-h-[112px] w-full resize-none rounded-t-[22px] bg-transparent px-4 py-3 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground sm:min-h-[132px] sm:px-5 sm:py-4 sm:text-[16px]"
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
             placeholder={
@@ -314,18 +333,18 @@ function AddSourcesModal({
         </div>
 
         <div
-          className="mt-5 rounded-[24px] border border-dashed border-border bg-muted/25 px-5 py-8 text-center transition hover:border-primary/50 hover:bg-primary/5"
+          className="mt-4 rounded-[22px] border border-dashed border-border bg-muted/25 px-4 py-5 text-center transition hover:border-primary/50 hover:bg-primary/5 sm:py-6"
           onDragOver={(event) => event.preventDefault()}
           onDrop={handleDrop}
         >
           <Upload className="mx-auto h-7 w-7 text-primary" />
-          <p className="mt-3 text-[22px] font-medium text-foreground">
+          <p className="mt-2 text-[20px] font-medium text-foreground sm:text-[22px]">
             {t("ou solte arquivos")}
           </p>
           <p className="mt-1 text-[14px] text-muted-foreground">
             {t("PDF, imagens, documentos, áudio e outros")}
           </p>
-          <label className="mx-auto mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 text-[14px] font-medium text-foreground shadow-sm transition hover:border-primary hover:text-primary">
+          <label className="mx-auto mt-3 inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 text-[14px] font-medium text-foreground shadow-sm transition hover:border-primary hover:text-primary sm:mt-4">
             <Upload className="h-4 w-4" />
             {t("Enviar arquivos")}
             <input
@@ -378,7 +397,7 @@ function AddSourcesModal({
           </p>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-3 sm:mt-5">
           <button
             type="button"
             className="rounded-full px-5 py-2.5 text-[14px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
@@ -436,6 +455,15 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   const [feedback, setFeedback] = useState<string>();
   const fileInput = useRef<HTMLInputElement>(null);
   const hydratedBaseId = useRef<string | undefined>(undefined);
+  const getMaxSourcesWidth = useCallback(getSourcesMaxWidth, []);
+  const {
+    width: sourcesWidth,
+    panelRef: sourcesPanelRef,
+    handleMouseDown: handleSourcesMouseDown,
+  } = useResizable({
+    minWidth: MIN_SOURCES_WIDTH,
+    getMaxWidth: getMaxSourcesWidth,
+  });
 
   const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
   const selectedBase = bases?.find((base) => base.id === selectedBaseId);
@@ -831,144 +859,137 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
               <LoaderCircle className="h-7 w-7 animate-spin text-primary" />
             </div>
           ) : selectedBase ? (
-            <div className="grid min-h-[calc(100dvh-145px)] flex-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
-              <aside className="flex min-h-0 flex-col border-b border-border bg-sidebar/30 lg:border-b-0 lg:border-r">
-                <div className="border-b border-border px-4 py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-[20px] font-medium text-foreground">
-                        {t("Fontes")}
-                      </h2>
-                      <p className="mt-1 text-[13px] text-muted-foreground">
-                        {documents?.length || 0} {t("fonte(s) nesta base")}
-                      </p>
+            <div
+              className="grid min-h-[calc(100dvh-145px)] flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]"
+              style={
+                sourcesWidth !== null
+                  ? {
+                      gridTemplateColumns: `${sourcesWidth}px minmax(0, 1fr)`,
+                    }
+                  : undefined
+              }
+            >
+              <div ref={sourcesPanelRef} className="relative min-h-0 h-full">
+                <aside className="flex h-full min-h-0 flex-col border-b border-border bg-sidebar/30 lg:border-b-0 lg:border-r">
+                  <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label={t("Redimensionar painel de fontes")}
+                    className="absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize lg:block"
+                    onMouseDown={handleSourcesMouseDown}
+                  />
+                  <div className="border-b border-border px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h2 className="text-[20px] font-medium text-foreground">
+                          {t("Fontes")}
+                        </h2>
+                        <p className="mt-1 text-[13px] text-muted-foreground">
+                          {documents?.length || 0} {t("fonte(s) nesta base")}
+                        </p>
+                      </div>
+                      {documentsLoading && (
+                        <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+                      )}
                     </div>
-                    {documentsLoading && (
-                      <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-4 py-2.5 text-[14px] font-medium text-primary transition hover:bg-primary/10"
+                        onClick={openAddSources}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {t("Adicionar fontes")}
+                      </button>
                     )}
                   </div>
-                  {isAdmin && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-2 text-[13px] font-medium text-foreground transition hover:border-primary hover:text-primary disabled:opacity-50"
-                        onClick={handleDuplicateBase}
-                        disabled={duplicateBase.isPending}
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        {duplicateBase.isPending
-                          ? t("Duplicando...")
-                          : t("Duplicar")}
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center rounded-full border border-destructive/30 p-2 text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
-                        onClick={handleDeleteBase}
-                        disabled={deleteBase.isPending}
-                        title={t("Excluir base")}
-                        aria-label={t("Excluir base")}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                  {isAdmin && (
+
+                  <div className="border-b border-border px-3 py-3">
                     <button
                       type="button"
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-4 py-2.5 text-[14px] font-medium text-primary transition hover:bg-primary/10"
-                      onClick={openAddSources}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${!selectedDocumentId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
+                      onClick={() => setSelectedDocumentId(undefined)}
                     >
-                      <Plus className="h-4 w-4" />
-                      {t("Adicionar fontes")}
+                      <BookOpenText className="h-5 w-5 shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14px] font-medium">
+                          {t("Contexto consolidado")}
+                        </span>
+                        <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                          {t("Visão geral da base")}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                     </button>
-                  )}
-                </div>
+                  </div>
 
-                <div className="border-b border-border px-3 py-3">
-                  <button
-                    type="button"
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${!selectedDocumentId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
-                    onClick={() => setSelectedDocumentId(undefined)}
-                  >
-                    <BookOpenText className="h-5 w-5 shrink-0" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-medium">
-                        {t("Contexto consolidado")}
-                      </span>
-                      <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                        {t("Visão geral da base")}
-                      </span>
-                    </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </button>
-                </div>
-
-                <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-                  {!documentsLoading && !documents?.length && (
-                    <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center">
-                      <FileText className="mx-auto h-7 w-7 text-muted-foreground" />
-                      <p className="mt-3 text-[14px] font-medium text-foreground">
-                        {t("Nenhuma fonte adicionada ainda")}
-                      </p>
-                      <p className="mt-1 text-[12px] text-muted-foreground">
-                        {t("Adicione arquivos, texto ou sites para começar.")}
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-1.5">
-                    {documents?.map((document) => {
-                      const active = document.active !== false;
-                      const selected = selectedDocumentId === document.id;
-                      return (
-                        <div
-                          key={document.id}
-                          className={`flex items-center gap-2 rounded-xl border px-2 py-2 transition ${selected ? "border-primary/30 bg-primary/10" : "border-transparent hover:border-border hover:bg-muted/60"}`}
-                        >
-                          <button
-                            type="button"
-                            className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                            aria-expanded={selected}
-                            onClick={() => setSelectedDocumentId(document.id)}
+                  <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+                    {!documentsLoading && !documents?.length && (
+                      <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center">
+                        <FileText className="mx-auto h-7 w-7 text-muted-foreground" />
+                        <p className="mt-3 text-[14px] font-medium text-foreground">
+                          {t("Nenhuma fonte adicionada ainda")}
+                        </p>
+                        <p className="mt-1 text-[12px] text-muted-foreground">
+                          {t("Adicione arquivos, texto ou sites para começar.")}
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1.5">
+                      {documents?.map((document) => {
+                        const active = document.active !== false;
+                        const selected = selectedDocumentId === document.id;
+                        return (
+                          <div
+                            key={document.id}
+                            className={`flex items-center gap-2 rounded-xl border px-2 py-2 transition ${selected ? "border-primary/30 bg-primary/10" : "border-transparent hover:border-border hover:bg-muted/60"}`}
                           >
-                            <span className="shrink-0">
-                              {sourceIcon(document)}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
-                                <span className="truncate text-[14px] font-medium text-foreground">
-                                  {document.file_name}
+                            <button
+                              type="button"
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                              aria-expanded={selected}
+                              onClick={() => setSelectedDocumentId(document.id)}
+                            >
+                              <span className="shrink-0">
+                                {sourceIcon(document)}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-2">
+                                  <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                                  <span className="truncate text-[14px] font-medium text-foreground">
+                                    {document.file_name}
+                                  </span>
+                                </span>
+                                <span className="mt-1 block pl-4">
+                                  {statusLabel(document, t)}
                                 </span>
                               </span>
-                              <span className="mt-1 block pl-4">
-                                {statusLabel(document, t)}
-                              </span>
-                            </span>
-                            <ChevronRight
-                              className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${selected ? "rotate-90" : ""}`}
-                            />
-                          </button>
-                          <div
-                            className="shrink-0"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <Switch
-                              checked={active}
-                              onCheckedChange={(checked) =>
-                                void handleToggle(document, checked)
-                              }
-                              disabled={!isAdmin || updateDocument.isPending}
-                              aria-label={
-                                active ? t("Fonte ativa") : t("Fonte inativa")
-                              }
-                            />
+                              <ChevronRight
+                                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${selected ? "rotate-90" : ""}`}
+                              />
+                            </button>
+                            <div
+                              className="shrink-0"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <Switch
+                                checked={active}
+                                onCheckedChange={(checked) =>
+                                  void handleToggle(document, checked)
+                                }
+                                disabled={!isAdmin || updateDocument.isPending}
+                                aria-label={
+                                  active ? t("Fonte ativa") : t("Fonte inativa")
+                                }
+                              />
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              </aside>
+                </aside>
+              </div>
 
               <main className="flex min-h-0 min-w-0 flex-col bg-background">
                 {selectedDocument ? (
