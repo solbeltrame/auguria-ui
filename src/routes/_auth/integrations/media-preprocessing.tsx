@@ -14,7 +14,7 @@ import TextAreaField from "@/components/TextAreaField";
 import Switch from "@/components/Switch";
 import { type OrganizationUpdate } from "@/supabase/client";
 import { useForm, Controller } from "react-hook-form";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 export const Route = createFileRoute("/_auth/integrations/media-preprocessing")(
   {
@@ -38,7 +38,15 @@ function MediaPreprocessingSettings() {
         ...org.extra,
         media_preprocessing: {
           mode: "inactive" as "active" | "inactive",
-          model: "gemini-2.5-flash" as "gemini-2.5-pro" | "gemini-2.5-flash",
+          provider: "google" as "google" | "groq",
+          model: "gemini-2.5-flash" as
+            | "gemini-2.5-pro"
+            | "gemini-2.5-flash"
+            | "qwen/qwen3.6-27b"
+            | "qwen/qwen3.8-27b",
+          transcription_model: "whisper-large-v3-turbo" as
+            | "whisper-large-v3-turbo"
+            | "whisper-large-v3",
           ...org.extra?.media_preprocessing,
         },
       },
@@ -49,8 +57,40 @@ function MediaPreprocessingSettings() {
     register,
     handleSubmit,
     control,
+    getValues,
+    setValue,
+    watch,
     formState: { isValid, isDirty },
   } = useForm<OrganizationUpdate>({ values: normalizedOrg });
+
+  const selectedModel = watch("extra.media_preprocessing.model");
+  const provider =
+    watch("extra.media_preprocessing.provider") ||
+    (selectedModel?.startsWith("qwen/") ? "groq" : "google");
+  const isGroq = provider === "groq";
+
+  useEffect(() => {
+    const currentModel = getValues("extra.media_preprocessing.model");
+    const modelBelongsToProvider = isGroq
+      ? currentModel?.startsWith("qwen/")
+      : currentModel?.startsWith("gemini-");
+    if (!modelBelongsToProvider) {
+      setValue(
+        "extra.media_preprocessing.model",
+        isGroq ? "qwen/qwen3.6-27b" : "gemini-2.5-flash",
+        { shouldDirty: true, shouldValidate: true },
+      );
+    }
+  }, [getValues, isGroq, setValue]);
+  const modelOptions = isGroq
+    ? [
+        { value: "qwen/qwen3.6-27b", label: "Qwen 3.6 27B (visão + OCR)" },
+        { value: "qwen/qwen3.8-27b", label: "Qwen 3.8 27B (visão + OCR)" },
+      ]
+    : [
+        { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+        { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+      ];
 
   return (
     <>
@@ -83,21 +123,47 @@ function MediaPreprocessingSettings() {
 
           <SelectField
             control={control}
-            name="extra.media_preprocessing.model"
-            label={t("Modelo")}
+            name="extra.media_preprocessing.provider"
+            label={t("Provedor")}
             options={[
-              { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-              { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+              { value: "google", label: "Google Gemini" },
+              { value: "groq", label: "Groq (Qwen + Whisper)" },
             ]}
             disabled={!isAdmin}
           />
 
+          <SelectField
+            control={control}
+            name="extra.media_preprocessing.model"
+            label={t("Modelo")}
+            options={modelOptions}
+            disabled={!isAdmin}
+          />
+
+          {isGroq && (
+            <SelectField
+              control={control}
+              name="extra.media_preprocessing.transcription_model"
+              label={t("Modelo de transcrição")}
+              options={[
+                {
+                  value: "whisper-large-v3-turbo",
+                  label: "Whisper Large V3 Turbo (recomendado)",
+                },
+                { value: "whisper-large-v3", label: "Whisper Large V3" },
+              ]}
+              disabled={!isAdmin}
+            />
+          )}
+
           <label>
-            <div className="label">{t("Clave API de Google")}</div>
+            <div className="label">
+              {isGroq ? t("Chave API do Groq") : t("Chave API do Google")}
+            </div>
             <input
               type="password"
               className="text"
-              placeholder="sk-..."
+              placeholder={isGroq ? "gsk_..." : "AIza..."}
               disabled={!isAdmin}
               {...register("extra.media_preprocessing.api_key")}
             />
@@ -105,17 +171,30 @@ function MediaPreprocessingSettings() {
 
           <div className="instructions">
             <p>
-              <strong>{t("Obtené una clave gratuita:")}</strong>{" "}
+              <strong>{t("Obtenha uma chave gratuita:")}</strong>{" "}
               <a
-                href="https://aistudio.google.com/app/apikey"
+                href={
+                  isGroq
+                    ? "https://console.groq.com/keys"
+                    : "https://aistudio.google.com/app/apikey"
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline"
               >
-                aistudio.google.com
+                {isGroq ? "console.groq.com" : "aistudio.google.com"}
               </a>
-              {" > "}Get API key {" > "} Create API key
+              {isGroq
+                ? " > API Keys > Create API key"
+                : " > Get API key > Create API key"}
             </p>
+            {isGroq && (
+              <p>
+                {t(
+                  "O Qwen interpreta imagens e páginas de PDF renderizadas; o Whisper transcreve áudios. Vídeos continuam usando Gemini.",
+                )}
+              </p>
+            )}
           </div>
 
           <label>
