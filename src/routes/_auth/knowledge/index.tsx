@@ -7,6 +7,7 @@ import {
   FolderOpen,
   LoaderCircle,
   Plus,
+  RotateCcw,
   Trash2,
   Upload,
   XCircle,
@@ -22,6 +23,7 @@ import {
   useDeleteKnowledgeDocument,
   useKnowledgeBases,
   useKnowledgeDocuments,
+  useReprocessKnowledgeDocument,
   useUploadKnowledgeDocument,
 } from "@/queries/useKnowledge";
 import useBoundStore from "@/stores/useBoundStore";
@@ -86,6 +88,7 @@ function KnowledgePage() {
   const deleteBase = useDeleteKnowledgeBase();
   const uploadDocument = useUploadKnowledgeDocument();
   const deleteDocument = useDeleteKnowledgeDocument();
+  const reprocessDocument = useReprocessKnowledgeDocument();
   const [selectedBaseId, setSelectedBaseId] = useState<string>();
   const [baseName, setBaseName] = useState("");
   const [baseDescription, setBaseDescription] = useState("");
@@ -160,6 +163,11 @@ function KnowledgePage() {
     if (!window.confirm(`${t("Excluir o arquivo")} “${document.file_name}”?`))
       return;
     deleteDocument.mutate(document);
+  };
+
+  const handleReprocessDocument = (document: KnowledgeDocumentRow) => {
+    if (!isAdmin || document.status !== "error") return;
+    reprocessDocument.mutate(document);
   };
 
   return (
@@ -396,14 +404,29 @@ function KnowledgePage() {
                   )}
                 </div>
                 {isAdmin && (
-                  <button
-                    type="button"
-                    className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    title={t("Excluir arquivo")}
-                    onClick={() => handleDeleteDocument(document)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {document.status === "error" && (
+                      <button
+                        type="button"
+                        className="rounded-full p-2 text-muted-foreground hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                        title={t("Tentar processar novamente")}
+                        onClick={() => handleReprocessDocument(document)}
+                        disabled={reprocessDocument.isPending}
+                      >
+                        <RotateCcw
+                          className={`h-4 w-4 ${reprocessDocument.isPending ? "animate-spin" : ""}`}
+                        />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      title={t("Excluir arquivo")}
+                      onClick={() => handleDeleteDocument(document)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

@@ -69,6 +69,78 @@ export function useKnowledgeDocuments(baseId?: string) {
   });
 }
 
+export function useAgentKnowledgeBaseIds(agentId?: string) {
+  const userId = useBoundStore((state) => state.ui.user?.id);
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useQuery({
+    queryKey: queryKeys.knowledge.agentLinks(organizationId, agentId),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("agent_knowledge_bases")
+        .select("knowledge_base_id")
+        .eq("organization_id", organizationId!)
+        .eq("agent_id", agentId!)
+        .throwOnError();
+      return data.map((row) => row.knowledge_base_id);
+    },
+    enabled: !!userId && !!organizationId && !!agentId,
+  });
+}
+
+export function useUpdateAgentKnowledgeBases(agentId: string) {
+  const queryClient = useQueryClient();
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async (baseIds: string[]) => {
+      const organization_id = requireOrganization(organizationId);
+      const { data: current } = await supabase
+        .from("agent_knowledge_bases")
+        .select("knowledge_base_id")
+        .eq("organization_id", organization_id)
+        .eq("agent_id", agentId)
+        .throwOnError();
+      const currentIds = new Set(current.map((row) => row.knowledge_base_id));
+      const nextIds = [...new Set(baseIds)];
+
+      await Promise.all(
+        current
+          .filter((row) => !nextIds.includes(row.knowledge_base_id))
+          .map((row) =>
+            supabase
+              .from("agent_knowledge_bases")
+              .delete()
+              .eq("organization_id", organization_id)
+              .eq("agent_id", agentId)
+              .eq("knowledge_base_id", row.knowledge_base_id)
+              .throwOnError(),
+          ),
+      );
+
+      const inserts = nextIds
+        .filter((baseId) => !currentIds.has(baseId))
+        .map((knowledge_base_id) => ({
+          organization_id,
+          agent_id: agentId,
+          knowledge_base_id,
+        }));
+      if (inserts.length) {
+        await supabase
+          .from("agent_knowledge_bases")
+          .insert(inserts)
+          .throwOnError();
+      }
+      return nextIds;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.agentLinks(organizationId, agentId),
+      });
+    },
+  });
+}
+
 export function useCreateKnowledgeBase() {
   const queryClient = useQueryClient();
   const organizationId = useBoundStore((state) => state.ui.activeOrgId);
@@ -183,6 +255,31 @@ export function useDeleteKnowledgeDocument() {
       return document;
     },
     onSuccess: (document) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledge.documents(
+          organizationId,
+          document.knowledge_base_id,
+        ),
+      });
+    },
+  });
+}
+
+export function useReprocessKnowledgeDocument() {
+  const queryClient = useQueryClient();
+  const organizationId = useBoundStore((state) => state.ui.activeOrgId);
+
+  return useMutation({
+    mutationFn: async (document: KnowledgeDocumentRow) => {
+      const organization_id = requireOrganization(organizationId);
+      const processed = await invokeFunction<KnowledgeDocumentRow>(
+        `knowledge-management/documents/${document.id}/reprocess?organization_id=${encodeURIComponent(organization_id)}`,
+        { method: "POST" },
+      );
+      if (!processed) throw new Error("Empty knowledge document response");
+      return processed;
+    },
+    onSettled: (_, _error, document) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.knowledge.documents(
           organizationId,

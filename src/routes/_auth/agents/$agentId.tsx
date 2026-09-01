@@ -8,6 +8,11 @@ import {
   useUpdateAgent,
   useCurrentAgent,
 } from "@/queries/useAgents";
+import {
+  useAgentKnowledgeBaseIds,
+  useKnowledgeBases,
+  useUpdateAgentKnowledgeBases,
+} from "@/queries/useKnowledge";
 import { useForm, useWatch } from "react-hook-form";
 import SectionBody from "@/components/SectionBody";
 import useBoundStore from "@/stores/useBoundStore";
@@ -41,8 +46,16 @@ function AgentDetail() {
   const isAdmin = ["admin", "owner"].includes(currentAgent?.role || "");
   const deleteAgent = useDeleteAgent();
   const updateAgent = useUpdateAgent();
+  const { data: knowledgeBases, isLoading: knowledgeBasesLoading } =
+    useKnowledgeBases();
+  const { data: linkedKnowledgeBaseIds, isLoading: knowledgeLinksLoading } =
+    useAgentKnowledgeBaseIds(agentId);
+  const updateKnowledgeBases = useUpdateAgentKnowledgeBases(agentId);
   const activeOrgId = useBoundStore((state) => state.ui.activeOrgId);
   const [provider, setProvider] = useState<keyof typeof protocols>("openai");
+  const [selectedKnowledgeBaseIds, setSelectedKnowledgeBaseIds] = useState<
+    string[]
+  >([]);
 
   const localAddress = useOrganizationsAddresses().data?.find(
     (address) => address.service === "local",
@@ -54,6 +67,12 @@ function AgentDetail() {
     const isKnown = ["openai", "anthropic", "groq", "google"].includes(apiUrl);
     setProvider(isKnown ? apiUrl : "custom");
   }, [agent]);
+
+  useEffect(() => {
+    if (linkedKnowledgeBaseIds) {
+      setSelectedKnowledgeBaseIds(linkedKnowledgeBaseIds);
+    }
+  }, [linkedKnowledgeBaseIds]);
 
   // Normalize agent data to ensure tools is always an array
   const normalizedAgent = useMemo(() => {
@@ -76,6 +95,13 @@ function AgentDetail() {
   } = useForm<AIAgentUpdate>({ values: normalizedAgent });
 
   const model = useWatch({ control, name: "extra.model" });
+  const knowledgeBasesDirty = useMemo(() => {
+    if (!linkedKnowledgeBaseIds) return false;
+    return (
+      [...linkedKnowledgeBaseIds].sort().join(",") !==
+      [...selectedKnowledgeBaseIds].sort().join(",")
+    );
+  }, [linkedKnowledgeBaseIds, selectedKnowledgeBaseIds]);
 
   const handleChat = async () => {
     if (!activeOrgId || !localAddress || !currentAgent) return;
@@ -144,6 +170,72 @@ function AgentDetail() {
               label={t("Instrucciones")}
               placeholder={t("Eres un asistente útil...")}
             />
+
+            <SectionField
+              label={t("Base de conhecimento")}
+              description={
+                selectedKnowledgeBaseIds.length
+                  ? t("Bases selecionadas")
+                  : t("Todas as bases ativas")
+              }
+              disabled={!isAdmin}
+            >
+              <p className="text-[14px] text-muted-foreground">
+                {t(
+                  "Sem vínculos, o agente consulta todas as bases ativas da organização. Selecione bases para limitar o contexto.",
+                )}
+              </p>
+              {knowledgeBasesLoading || knowledgeLinksLoading ? (
+                <p className="text-[14px] text-muted-foreground">
+                  {t("Carregando bases...")}
+                </p>
+              ) : knowledgeBases?.length ? (
+                <div className="flex flex-col gap-3">
+                  {knowledgeBases.map((base) => (
+                    <label
+                      key={base.id}
+                      className="flex items-start gap-3 rounded-lg border border-border p-3"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={selectedKnowledgeBaseIds.includes(base.id)}
+                        onChange={(event) => {
+                          setSelectedKnowledgeBaseIds((current) =>
+                            event.target.checked
+                              ? [...current, base.id]
+                              : current.filter((id) => id !== base.id),
+                          );
+                        }}
+                      />
+                      <span className="flex flex-col gap-1">
+                        <span>{base.name}</span>
+                        {base.description && (
+                          <span className="text-[13px] text-muted-foreground">
+                            {base.description}
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[14px] text-muted-foreground">
+                  {t("Crie uma base de conhecimento para vinculá-la aqui.")}
+                </p>
+              )}
+              <Button
+                type="button"
+                className="primary"
+                loading={updateKnowledgeBases.isPending}
+                invalid={!knowledgeBasesDirty}
+                onClick={() =>
+                  updateKnowledgeBases.mutate(selectedKnowledgeBaseIds)
+                }
+              >
+                {t("Salvar bases do agente")}
+              </Button>
+            </SectionField>
 
             {/* Tools Section */}
             <ToolsSection
