@@ -308,7 +308,15 @@ export function useUploadKnowledgeDocument() {
   const organizationId = useBoundStore((state) => state.ui.activeOrgId);
 
   return useMutation({
-    mutationFn: async ({ baseId, file }: { baseId: string; file: File }) => {
+    mutationFn: async ({
+      baseId,
+      file,
+      title,
+    }: {
+      baseId: string;
+      file: File;
+      title?: string;
+    }) => {
       const organization_id = requireOrganization(organizationId);
       if (!file.size || file.size > MAX_FILE_SIZE) {
         throw new Error("Cada arquivo deve ter entre 1 B e 20 MB");
@@ -336,6 +344,7 @@ export function useUploadKnowledgeDocument() {
             knowledge_base_id: baseId,
             storage_path: storagePath,
             file_name: file.name,
+            title: title?.trim() || undefined,
             mime_type: file.type || "application/octet-stream",
             file_size: file.size,
           },
@@ -380,6 +389,7 @@ export function useCreateKnowledgeLink() {
             source_type: "url",
             source_url: url,
             file_name: title?.trim() || undefined,
+            title: title?.trim() || undefined,
             mime_type: "text/html",
             file_size: 0,
           },
@@ -407,16 +417,21 @@ export function useUpdateKnowledgeDocument() {
     mutationFn: async ({
       document,
       active,
+      title,
     }: {
       document: KnowledgeDocumentRow;
-      active: boolean;
+      active?: boolean;
+      title?: string;
     }) => {
       const organization_id = requireOrganization(organizationId);
       const updated = await invokeFunction<KnowledgeDocumentRow>(
         `knowledge-management/documents/${document.id}?organization_id=${encodeURIComponent(organization_id)}`,
         {
           method: "PATCH",
-          body: { active },
+          body: {
+            ...(active !== undefined ? { active } : {}),
+            ...(title !== undefined ? { title } : {}),
+          },
         },
       );
       if (!updated) throw new Error("Empty knowledge document response");

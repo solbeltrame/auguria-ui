@@ -157,10 +157,15 @@ function titleForUrl(value: string): string {
   }
 }
 
+function sourceTitleForDocument(document: KnowledgeDocumentRow): string {
+  return document.title?.trim() || document.file_name;
+}
+
 type AddSourcesModalProps = {
   isOpen: boolean;
   mode: SourceMode;
   draft: string;
+  title: string;
   files: File[];
   error?: string;
   isBusy: boolean;
@@ -168,6 +173,7 @@ type AddSourcesModalProps = {
   onClose: () => void;
   onModeChange: (mode: SourceMode) => void;
   onDraftChange: (value: string) => void;
+  onTitleChange: (value: string) => void;
   onSelectFiles: (files: File[]) => void;
   onRemoveFile: (index: number) => void;
   onSubmit: () => void;
@@ -177,6 +183,7 @@ function AddSourcesModal({
   isOpen,
   mode,
   draft,
+  title,
   files,
   error,
   isBusy,
@@ -184,6 +191,7 @@ function AddSourcesModal({
   onClose,
   onModeChange,
   onDraftChange,
+  onTitleChange,
   onSelectFiles,
   onRemoveFile,
   onSubmit,
@@ -263,9 +271,33 @@ function AddSourcesModal({
           </button>
         </div>
 
-        <div className="mt-5 rounded-[24px] border-2 border-primary/60 bg-background shadow-sm transition focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_15%,transparent)] sm:mt-6">
+        <div className="mt-5 sm:mt-6">
+          <label
+            className="mb-1.5 block px-1 text-[13px] font-medium text-foreground"
+            htmlFor="knowledge-source-title"
+          >
+            {t("Título da fonte")}{" "}
+            <span className="font-normal text-muted-foreground">
+              ({t("opcional")})
+            </span>
+          </label>
+          <input
+            id="knowledge-source-title"
+            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-[15px] text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+            value={title}
+            onChange={(event) => onTitleChange(event.target.value)}
+            placeholder={t("Ex.: Tabela de preços 2026")}
+            maxLength={160}
+          />
+          <p className="mt-1 px-1 text-[12px] text-muted-foreground">
+            {t(
+              "Esse nome aparece na lista de fontes. Ao adicionar várias de uma vez, você pode ajustar cada título depois.",
+            )}
+          </p>
+        </div>
+
+        <div className="mt-4 rounded-[24px] border-2 border-primary/60 bg-background shadow-sm transition focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_15%,transparent)]">
           <textarea
-            autoFocus
             className="min-h-[112px] w-full resize-none rounded-t-[22px] bg-transparent px-4 py-3 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground sm:min-h-[132px] sm:px-5 sm:py-4 sm:text-[16px]"
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
@@ -445,8 +477,10 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   const [baseDescription, setBaseDescription] = useState("");
   const [showBaseForm, setShowBaseForm] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
+  const [editingDocumentTitle, setEditingDocumentTitle] = useState("");
   const [sourceMode, setSourceMode] = useState<SourceMode>("text");
   const [sourceDraft, setSourceDraft] = useState("");
+  const [sourceTitle, setSourceTitle] = useState("");
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [showAddSources, setShowAddSources] = useState(false);
   const [instructions, setInstructions] = useState("");
@@ -455,6 +489,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   const [feedback, setFeedback] = useState<string>();
   const fileInput = useRef<HTMLInputElement>(null);
   const hydratedBaseId = useRef<string | undefined>(undefined);
+  const hydratedDocumentId = useRef<string | undefined>(undefined);
   const getMaxSourcesWidth = useCallback(getSourcesMaxWidth, []);
   const {
     width: sourcesWidth,
@@ -497,6 +532,8 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
     setInstructions(selectedBase.instructions || "");
     setGeneratedContext(selectedBase.generated_context || "");
     setSelectedDocumentId(undefined);
+    hydratedDocumentId.current = undefined;
+    setEditingDocumentTitle("");
     setUploadError(undefined);
     setFeedback(undefined);
   }, [selectedBase]);
@@ -510,6 +547,17 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
     }
   }, [documents, selectedDocumentId]);
 
+  useEffect(() => {
+    if (!selectedDocument) {
+      hydratedDocumentId.current = undefined;
+      setEditingDocumentTitle("");
+      return;
+    }
+    if (hydratedDocumentId.current === selectedDocument.id) return;
+    hydratedDocumentId.current = selectedDocument.id;
+    setEditingDocumentTitle(sourceTitleForDocument(selectedDocument));
+  }, [selectedDocument]);
+
   const consolidate = async (baseId: string) => {
     const base = await synthesizeBase.mutateAsync(baseId);
     setGeneratedContext(base.generated_context || "");
@@ -518,6 +566,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   const openAddSources = () => {
     setSourceMode("text");
     setSourceDraft("");
+    setSourceTitle("");
     setSourceFiles([]);
     setUploadError(undefined);
     setShowAddSources(true);
@@ -527,6 +576,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
     if (addSourcesBusy) return;
     setShowAddSources(false);
     setSourceDraft("");
+    setSourceTitle("");
     setSourceFiles([]);
     setUploadError(undefined);
   };
@@ -641,6 +691,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
   const handleAddSources = async () => {
     if (!selectedBase || !isAdmin) return;
     const draft = sourceDraft.trim();
+    const title = sourceTitle.trim() || undefined;
     const files = [...sourceFiles];
     const urls = sourceMode === "sites" ? parseSiteUrls(draft) : [];
 
@@ -669,7 +720,11 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
 
     for (const file of files) {
       try {
-        await uploadDocument.mutateAsync({ baseId: selectedBase.id, file });
+        await uploadDocument.mutateAsync({
+          baseId: selectedBase.id,
+          file,
+          title,
+        });
         successCount += 1;
       } catch (error) {
         failures.push(`${file.name}: ${errorMessage(error)}`);
@@ -681,7 +736,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
         await createLink.mutateAsync({
           baseId: selectedBase.id,
           url,
-          title: titleForUrl(url),
+          title: title || titleForUrl(url),
         });
         successCount += 1;
       } catch (error) {
@@ -700,6 +755,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
       }
       setShowAddSources(false);
       setSourceDraft("");
+      setSourceTitle("");
       setSourceFiles([]);
     }
 
@@ -721,9 +777,35 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
     }
   };
 
+  const handleSaveDocumentTitle = async () => {
+    if (!selectedDocument || !isAdmin) return;
+    const title = editingDocumentTitle.trim();
+    if (!title) {
+      setUploadError(t("Informe um título para a fonte."));
+      return;
+    }
+    setUploadError(undefined);
+    setFeedback(undefined);
+    try {
+      const updated = await updateDocument.mutateAsync({
+        document: selectedDocument,
+        title,
+      });
+      setEditingDocumentTitle(sourceTitleForDocument(updated));
+      if (selectedBase) await consolidate(selectedBase.id);
+      setFeedback(t("Título da fonte salvo."));
+    } catch (error) {
+      setUploadError(errorMessage(error));
+    }
+  };
+
   const handleDeleteDocument = (document: KnowledgeDocumentRow) => {
     if (!isAdmin) return;
-    if (!window.confirm(`${t("Excluir a fonte")} “${document.file_name}”?`))
+    if (
+      !window.confirm(
+        `${t("Excluir a fonte")} “${sourceTitleForDocument(document)}”?`,
+      )
+    )
       return;
     deleteDocument.mutate(document, {
       onSuccess: () => {
@@ -957,7 +1039,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
                                 <span className="flex items-center gap-2">
                                   <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
                                   <span className="truncate text-[14px] font-medium text-foreground">
-                                    {document.file_name}
+                                    {sourceTitleForDocument(document)}
                                   </span>
                                 </span>
                                 <span className="mt-1 block pl-4">
@@ -1010,8 +1092,14 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
                         </div>
                         <div className="min-w-0">
                           <h2 className="truncate text-[20px] font-medium text-foreground">
-                            {selectedDocument.file_name}
+                            {sourceTitleForDocument(selectedDocument)}
                           </h2>
+                          {selectedDocument.title !==
+                            selectedDocument.file_name && (
+                            <p className="mt-1 truncate text-[12px] text-muted-foreground">
+                              {selectedDocument.file_name}
+                            </p>
+                          )}
                           <div className="mt-1 flex flex-wrap items-center gap-3">
                             {statusLabel(selectedDocument, t)}
                             <span className="text-[12px] text-muted-foreground">
@@ -1065,6 +1153,54 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
 
                     <div className="min-h-0 flex-1 overflow-y-auto p-5">
                       <div className="mx-auto flex max-w-[940px] flex-col gap-5">
+                        <section className="rounded-2xl border border-border p-4 sm:p-5">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-[16px] font-medium text-foreground">
+                                {t("Título da fonte")}
+                              </h3>
+                              <p className="mt-1 text-[13px] text-muted-foreground">
+                                {t(
+                                  "Use um nome curto para encontrar esta fonte rapidamente na lista.",
+                                )}
+                              </p>
+                            </div>
+                            <span className="text-[12px] text-muted-foreground">
+                              {editingDocumentTitle.length} / 160
+                            </span>
+                          </div>
+                          <input
+                            className="mt-4 w-full rounded-xl border border-border bg-muted/20 px-4 py-3 text-[15px] text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                            value={editingDocumentTitle}
+                            onChange={(event) =>
+                              setEditingDocumentTitle(
+                                event.target.value.slice(0, 160),
+                              )
+                            }
+                            maxLength={160}
+                            readOnly={!isAdmin}
+                            aria-label={t("Título da fonte")}
+                          />
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-[14px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-default disabled:opacity-50"
+                              disabled={
+                                updateDocument.isPending ||
+                                !editingDocumentTitle.trim() ||
+                                editingDocumentTitle.trim() ===
+                                  sourceTitleForDocument(selectedDocument)
+                              }
+                              onClick={() => void handleSaveDocumentTitle()}
+                            >
+                              <Save className="h-4 w-4" />
+                              {updateDocument.isPending
+                                ? t("Salvando...")
+                                : t("Salvar título")}
+                            </button>
+                          )}
+                        </section>
+
                         {selectedDocument.source_url && (
                           <a
                             className="flex items-start gap-2 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-[14px] text-primary underline decoration-primary/40 underline-offset-2 hover:bg-primary/5"
@@ -1295,6 +1431,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
         isOpen={showAddSources}
         mode={sourceMode}
         draft={sourceDraft}
+        title={sourceTitle}
         files={sourceFiles}
         error={uploadError}
         isBusy={addSourcesBusy}
@@ -1306,6 +1443,7 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId: string }) {
           setUploadError(undefined);
         }}
         onDraftChange={setSourceDraft}
+        onTitleChange={setSourceTitle}
         onSelectFiles={handleSelectFiles}
         onRemoveFile={(index) =>
           setSourceFiles((current) =>
