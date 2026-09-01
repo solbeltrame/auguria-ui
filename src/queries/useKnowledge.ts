@@ -35,6 +35,42 @@ function safeFileName(fileName: string): string {
   return normalized || "arquivo";
 }
 
+async function recoverStaleProcessingDocuments(
+  rows: KnowledgeDocumentRow[],
+  organizationId: string,
+): Promise<KnowledgeDocumentRow[]> {
+  const cutoff = Date.now() - STALE_PROCESSING_MS;
+  const staleIds = rows
+    .filter(
+      (row) =>
+        row.status === "processing" &&
+        new Date(row.updated_at).getTime() < cutoff,
+    )
+    .map((row) => row.id);
+  if (!staleIds.length) return rows;
+
+  try {
+    const { data: recovered } = await supabase
+      .from("knowledge_documents")
+      .update({
+        status: "error",
+        error_message: STALE_PROCESSING_MESSAGE,
+      })
+      .eq("organization_id", organizationId)
+      .eq("status", "processing")
+      .in("id", staleIds)
+      .select(KNOWLEDGE_DOCUMENT_LIST_COLUMNS)
+      .throwOnError();
+    if (!recovered?.length) return rows;
+    const recoveredById = new Map(
+      (recovered as KnowledgeDocumentRow[]).map((row) => [row.id, row]),
+    );
+    return rows.map((row) => recoveredById.get(row.id) || row);
+  } catch {
+    return rows;
+  }
+}
+
 export function useKnowledgeBases(enabled = true) {
   const userId = useBoundStore((state) => state.ui.user?.id);
   const organizationId = useBoundStore((state) => state.ui.activeOrgId);
@@ -88,37 +124,10 @@ export function useKnowledgeDocuments(baseId?: string) {
         .order("created_at", { ascending: false });
       if (baseId) query = query.eq("knowledge_base_id", baseId);
       const { data } = await query.throwOnError();
-      const rows = data as KnowledgeDocumentRow[];
-      const cutoff = Date.now() - STALE_PROCESSING_MS;
-      const staleIds = rows
-        .filter(
-          (row) =>
-            row.status === "processing" &&
-            new Date(row.updated_at).getTime() < cutoff,
-        )
-        .map((row) => row.id);
-      if (!staleIds.length) return rows;
-
-      try {
-        const { data: recovered } = await supabase
-          .from("knowledge_documents")
-          .update({
-            status: "error",
-            error_message: STALE_PROCESSING_MESSAGE,
-          })
-          .eq("organization_id", organizationId!)
-          .eq("status", "processing")
-          .in("id", staleIds)
-          .select(KNOWLEDGE_DOCUMENT_LIST_COLUMNS)
-          .throwOnError();
-        if (!recovered?.length) return rows;
-        const recoveredById = new Map(
-          (recovered as KnowledgeDocumentRow[]).map((row) => [row.id, row]),
-        );
-        return rows.map((row) => recoveredById.get(row.id) || row);
-      } catch {
-        return rows;
-      }
+      return await recoverStaleProcessingDocuments(
+        data as KnowledgeDocumentRow[],
+        organizationId!,
+      );
     },
     enabled: !!userId && !!organizationId && !!baseId,
     refetchInterval: (query) => {
@@ -146,7 +155,11 @@ export function useKnowledgeDocument(documentId?: string) {
         .eq("id", documentId!)
         .single()
         .throwOnError();
-      return data as KnowledgeDocumentRow;
+      const [document] = await recoverStaleProcessingDocuments(
+        [data as KnowledgeDocumentRow],
+        organizationId!,
+      );
+      return document;
     },
     enabled: !!userId && !!organizationId && !!documentId,
   });
