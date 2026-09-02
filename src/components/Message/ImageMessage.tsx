@@ -231,7 +231,11 @@ export default function ImageMessage(message: MessageRow) {
       {/* Caption */}
       {content.text && (
         <div className="pl-[6px] pt-[6px] pb-[5px] pr-[4px]" style={{ width }}>
-          <Markdown content={content.text || ""} direction={direction} />
+          <Markdown
+            content={content.text || ""}
+            direction={direction}
+            humanize
+          />
         </div>
       )}
 
@@ -258,6 +262,7 @@ export default function ImageMessage(message: MessageRow) {
                     : "";
                 })()}
                 direction={direction}
+                humanize
               />
             )}
             <div

@@ -31,6 +31,7 @@ import { useCurrentAgent, useCurrentAgents } from "@/queries/useAgents";
 import { useContactAddress } from "@/queries/useContactsAddresses";
 import { formatPhoneNumber, nameInitials } from "@/utils/FormatUtils";
 import { useNavigate } from "@tanstack/react-router";
+import { humanizeText } from "@/utils/humanizeText";
 
 function mediaPreview(t: (content: string) => ReactNode, message?: MessageRow) {
   let mediaIcon = null;
@@ -413,7 +414,8 @@ export default function ChatListItem({ itemId }: { itemId: string }) {
                     </div>
                   )}
                 <div className="truncate text-[14px]">
-                  {preview?.content.type === "text" && preview.content.text}
+                  {preview?.content.type === "text" &&
+                    humanizeText(preview.content.text)}
                   {preview?.content.type === "data" &&
                     preview.content.kind !== "media_placeholder" &&
                     JSON.stringify(preview.content.data)}

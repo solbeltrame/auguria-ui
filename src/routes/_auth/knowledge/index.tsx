@@ -54,6 +54,7 @@ import {
   useUploadKnowledgeDocument,
 } from "@/queries/useKnowledge";
 import type { KnowledgeDocumentRow } from "@/supabase/client";
+import { humanizeText } from "@/utils/humanizeText";
 
 export const Route = createFileRoute("/_auth/knowledge/")({
   component: KnowledgeBasesPage,
@@ -1338,18 +1339,21 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                             </span>
                           </div>
                           <textarea
-                            className="mt-4 min-h-[420px] w-full resize-y rounded-xl border border-border bg-muted/20 px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground outline-none"
+                            className="mt-4 min-h-[420px] w-full resize-y rounded-xl border border-border bg-muted/20 px-4 py-3 text-[14px] leading-relaxed text-foreground outline-none"
                             value={
                               selectedDocumentLoading && !selectedDocumentDetail
                                 ? t("Carregando conteúdo da fonte...")
-                                : selectedDocumentDetail?.extracted_text ||
-                                  (selectedDocument.status === "processing"
+                                : selectedDocumentDetail?.extracted_text
+                                  ? humanizeText(
+                                      selectedDocumentDetail.extracted_text,
+                                    )
+                                  : selectedDocument.status === "processing"
                                     ? t(
                                         "Esta fonte ainda está sendo interpretada...",
                                       )
                                     : t(
                                         "Nenhum conteúdo interpretado disponível.",
-                                      ))
+                                      )
                             }
                             readOnly
                             aria-label={t("Conteúdo interpretado")}
@@ -1443,8 +1447,8 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                             )}
                           </div>
                           <textarea
-                            className="mt-4 min-h-[300px] w-full resize-y rounded-xl border border-border bg-muted/20 px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground outline-none"
-                            value={generatedContext}
+                            className="mt-4 min-h-[300px] w-full resize-y rounded-xl border border-border bg-muted/20 px-4 py-3 text-[14px] leading-relaxed text-foreground outline-none"
+                            value={humanizeText(generatedContext)}
                             readOnly
                             placeholder={t(
                               "Adicione fontes ativas para gerar o contexto consolidado...",

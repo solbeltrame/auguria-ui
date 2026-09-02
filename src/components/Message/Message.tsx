@@ -4,6 +4,7 @@ import {
   type ToolInfo,
   type Direction,
   contactName,
+  isInternal,
   isTeamChat,
   messageDirection,
 } from "@/supabase/client";
@@ -25,6 +26,7 @@ import { useContactAddress } from "@/queries/useContactsAddresses";
 import { formatPhoneNumber } from "@/utils/FormatUtils";
 import { AVATAR_BG_COLORS, AVATAR_TEXT_COLORS } from "@/utils/colors";
 import type { Json } from "@/supabase/db_types";
+import { cleanAgentReply } from "@/utils/humanizeText";
 
 const md = new Remarkable({
   breaks: true,
@@ -75,22 +77,26 @@ export function Markdown({
   direction,
   onInput,
   withoutEndingSpace,
+  humanize,
 }: {
   content: string;
   direction: Direction;
   onInput?: FormEventHandler<HTMLDivElement>;
   withoutEndingSpace?: boolean;
+  humanize?: boolean;
 }) {
+  let renderedContent = humanize ? cleanAgentReply(content) : content;
+
   // Hack to induce some space to not to overwrite the timestamp.
   if (!withoutEndingSpace) {
-    content += "&emsp;&emsp;&emsp;";
+    renderedContent += "&emsp;&emsp;&emsp;";
 
     if (direction === "outgoing") {
-      content += "&emsp;";
+      renderedContent += "&emsp;";
     }
   }
 
-  const renderedHTML = md.render(whatsappToMarkdown(content));
+  const renderedHTML = md.render(whatsappToMarkdown(renderedContent));
 
   return (
     <div
@@ -112,6 +118,7 @@ export function TextMessage({
   direction,
   type,
   fixedWidth,
+  humanize,
 }: {
   header?: string;
   body: string | Json;
@@ -123,6 +130,7 @@ export function TextMessage({
   direction: Direction;
   type?: "markdown" | "json";
   fixedWidth?: boolean;
+  humanize?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { translate: t } = useTranslation();
@@ -197,6 +205,7 @@ export function TextMessage({
                 direction={direction}
                 onInput={onInput}
                 withoutEndingSpace={!!footer}
+                humanize={humanize}
               />
             </div>
           )}
@@ -417,6 +426,8 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
     isTeamChat(state.chat.conversations.get(props.message.conversation_id)),
   );
   const direction = messageDirection(props.message, ownAgentId, teamChat);
+  const humanizeAgentMessage =
+    props.message.agent_id !== null && !isInternal(props.message);
 
   // Attribution in contact space. Where the peer's side can hold more than one
   // party, the incoming row carries its actual sender in sender_address while
@@ -472,6 +483,7 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         timestamp={props.message.timestamp}
         status={direction === "outgoing" ? props.message.status : undefined}
         fixedWidth={fixedWidth}
+        humanize={humanizeAgentMessage}
       />
     );
     text = true;
@@ -488,6 +500,7 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         timestamp={props.message.timestamp}
         status={direction === "outgoing" ? props.message.status : undefined}
         fixedWidth={fixedWidth}
+        humanize={humanizeAgentMessage}
       />
     );
     text = true;
@@ -514,6 +527,7 @@ export default function Message(props: UIMessage & { message: MessageRow }) {
         timestamp={props.message.timestamp}
         status={direction === "outgoing" ? props.message.status : undefined}
         fixedWidth={fixedWidth}
+        humanize={humanizeAgentMessage}
       />
     );
     text = true;
