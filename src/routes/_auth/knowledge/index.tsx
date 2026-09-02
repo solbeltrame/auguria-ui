@@ -895,7 +895,12 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
   };
 
   const handleReprocessDocument = (document: KnowledgeDocumentRow) => {
-    if (!isAdmin || document.status !== "error") return;
+    if (
+      !isAdmin ||
+      document.status === "pending" ||
+      document.status === "processing"
+    )
+      return;
     reprocessDocument.mutate(document, {
       onSuccess: () => {
         if (selectedBase) void consolidate(selectedBase.id);
@@ -1227,21 +1232,23 @@ export function KnowledgeBaseWorkspace({ baseId }: { baseId?: string }) {
                               : t("Fonte inativa")
                           }
                         />
-                        {selectedDocument.status === "error" && isAdmin && (
-                          <button
-                            type="button"
-                            className="rounded-full p-2 text-muted-foreground transition hover:bg-primary/10 hover:text-primary disabled:opacity-50"
-                            title={t("Tentar processar novamente")}
-                            onClick={() =>
-                              handleReprocessDocument(selectedDocument)
-                            }
-                            disabled={reprocessDocument.isPending}
-                          >
-                            <RefreshCcw
-                              className={`h-5 w-5 ${reprocessDocument.isPending ? "animate-spin" : ""}`}
-                            />
-                          </button>
-                        )}
+                        {selectedDocument.status !== "pending" &&
+                          selectedDocument.status !== "processing" &&
+                          isAdmin && (
+                            <button
+                              type="button"
+                              className="rounded-full p-2 text-muted-foreground transition hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                              title={t("Reinterpretar fonte")}
+                              onClick={() =>
+                                handleReprocessDocument(selectedDocument)
+                              }
+                              disabled={reprocessDocument.isPending}
+                            >
+                              <RefreshCcw
+                                className={`h-5 w-5 ${reprocessDocument.isPending ? "animate-spin" : ""}`}
+                              />
+                            </button>
+                          )}
                         {isAdmin && (
                           <button
                             type="button"
