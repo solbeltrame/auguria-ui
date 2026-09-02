@@ -143,8 +143,7 @@ function sourceIcon(document: KnowledgeDocumentRow, className = "h-5 w-5") {
 }
 
 function parseSiteUrls(value: string): string[] {
-  const urls = value
-    .split(/[\s,]+/)
+  const urls = (value.match(/https?:\/\/[^\s<>"']+/gi) ?? [])
     .map((item) => item.replace(/[)\]}>,.;]+$/g, ""))
     .filter(Boolean)
     .filter((item) => {
